@@ -663,30 +663,27 @@ const onImportFile = () => fileInput.value?.click();
 const onFileSelected = async (e: Event) => {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
-  // 导入诊断埋点：定位"选完文件无反应"断在哪一步，问题修复后移除
-  console.info('[Choice][导入诊断] change 触发: files.length =', input.files?.length, ', file =', file?.name);
-  toastr.info(`诊断① change已触发 | files=${input.files?.length ?? 0} | file=${file?.name ?? '无'}`);
+  // 导入流程诊断：console 输出经 TT「Capture full console logs」进入运行日志（来源 3p:choice），定位完成后精简
+  console.info('[Choice][导入] ① change 触发 | files =', input.files?.length, '| file =', file?.name);
   if (!file) return;
   try {
     const text = await file.text();
-    console.info('[Choice][导入诊断] 读取成功, 长度 =', text.length);
-    toastr.info(`诊断② 读取成功 ${text.length} 字符`);
+    console.info('[Choice][导入] ② 读取成功 | 长度 =', text.length);
     const data = JSON.parse(text);
-    console.info('[Choice][导入诊断] 解析成功, type =', data?.type);
-    toastr.info(`诊断③ 解析成功 type=${data?.type ?? '无'}`);
+    console.info('[Choice][导入] ③ 解析成功 | type =', data?.type);
     if (data?.type !== 'choice-pool-export') {
+      console.error('[Choice][导入] 类型不匹配 | 期望 choice-pool-export | 实际', data?.type);
       toastr.error(t`文件格式不正确`);
       return;
     }
     importFileData.value = { ...data.data, fileName: file.name, exportedAt: data.exportedAt };
     showImportPool.value = true;
-    console.info('[Choice][导入诊断] 确认框已请求显示');
-    toastr.info('诊断④ 确认框应已弹出');
+    console.info('[Choice][导入] ④ 确认框已请求显示');
   } catch (err) {
-    console.error('[Choice][导入诊断] 异常:', err);
-    toastr.error(`诊断异常: ${err instanceof Error ? err.message : String(err)}`);
+    console.error('[Choice][导入] 处理异常:', err);
+    toastr.error(`导入失败: ${err instanceof Error ? err.message : String(err)}`);
   }
-  (e.target as HTMLInputElement).value = '';
+  input.value = '';
 };
 
 const onImportPoolConfirm = (mode: 'merge' | 'replace') => {
