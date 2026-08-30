@@ -487,7 +487,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
-          cross_layer_fallback: false,
         },
       });
     }
@@ -504,7 +503,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
-          cross_layer_fallback: false,
         },
       });
       try {
@@ -532,7 +530,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
-          cross_layer_fallback: false,
         },
       });
       try {
@@ -566,7 +563,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
-          cross_layer_fallback: false,
         },
       });
     }
@@ -628,7 +624,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
             categories_enabled: true,
             shuffle_final: true,
             pinned_overflow: 'send_all',
-            cross_layer_fallback: false,
           },
         },
       ];
@@ -1211,7 +1206,6 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
-          cross_layer_fallback: false,
         },
       },
     ];

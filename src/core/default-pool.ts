@@ -850,7 +850,6 @@ export const DEFAULT_POOL_CONFIGS = [
       'categories_enabled': true,
       'shuffle_final': true,
       'pinned_overflow': 'send_all',
-      'cross_layer_fallback': false,
       'candidate_multiplier': 2
     }
   }
