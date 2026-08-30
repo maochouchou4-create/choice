@@ -19,11 +19,8 @@
             <button class="choice-icon-btn" :title="t`新建分组`" @click="createGroup">
               <i class="fa-solid fa-folder-plus"></i>
             </button>
-            <button class="choice-icon-btn" :title="t`导入文件`" @click="onImportFile">
-              <i class="fa-solid fa-file-import"></i>
-            </button>
-            <button class="choice-icon-btn" :title="t`导出文件`" @click="onExportPool">
-              <i class="fa-solid fa-file-export"></i>
+            <button class="choice-icon-btn" :title="t`恢复默认池（覆盖当前条目库，不可撤销）`" @click="onResetPool">
+              <i class="fa-solid fa-rotate-left"></i>
             </button>
             <button class="choice-icon-btn" :title="t`AI 生成`" @click="showGen = true">
               <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -205,15 +202,6 @@
 
         <PoolGenDialog :open="showGen" :categories="categoryNames" @close="showGen = false" @confirm="onGenConfirm" />
 
-        <ImportPoolDialog
-          :open="showImportPool"
-          :data="importFileData"
-          @close="showImportPool = false"
-          @confirm="onImportPoolConfirm"
-        />
-
-        <input type="file" accept=".json" ref="fileInput" style="display: none" @change="onFileSelected" />
-
         <ConfirmDialog
           :open="deleteTarget !== null"
           :title="deleteDialogTitle"
@@ -242,11 +230,11 @@
 import toastr from 'toastr';
 import { uuidv4 } from '@sillytavern/scripts/utils';
 import PoolGenDialog from '@/components/PoolGenDialog.vue';
-import ImportPoolDialog from '@/components/ImportPoolDialog.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import GuidePopover from '@/components/GuidePopover.vue';
 import { useGlobalSettingsStore } from '@/store/global-settings';
-import type { PoolEntry } from '@/type/settings';
+import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
+import { GenerationSettings, type PoolEntry } from '@/type/settings';
 import { draggableFilterOptions } from '@/util/sortable';
 import Sortable from 'sortablejs';
 
@@ -263,15 +251,12 @@ const allGroupsExpanded = ref(false);
 const groupRenameId = ref<string | null>(null);
 const groupRenameText = ref('');
 const showGen = ref(false);
-const showImportPool = ref(false);
-const importFileData = ref<any>(null);
-const fileInput = ref<HTMLInputElement | null>(null);
 const showGuide = ref(false);
 const guideBtn = ref<HTMLElement | null>(null);
 
 const guideHtml = `<p><strong>条目库</strong> 是所有行动选项条目的总仓库，按分组管理。配置中的条目都是从这里勾选引用的，修改条目库会同步影响所有使用该条目的配置。</p>
 <p><strong>分组</strong>：点击分组名可展开/折叠，支持跨分组拖拽条目。空分组在关闭弹窗时会自动清理。点击分组名旁的 + 添加条目，📋 复制整组。</p>
-<p><strong>操作</strong>：左侧勾选复选框批量选中，顶部工具栏支持全部展开/收起、新建分组、文件导入/导出、AI 批量生成。拖拽 ☰ 可调整条目顺序。</p>`;
+<p><strong>操作</strong>：左侧勾选复选框批量选中，顶部工具栏支持全部展开/收起、新建分组、恢复默认池、AI 批量生成。拖拽 ☰ 可调整条目顺序。</p>`;
 const deleteTarget = ref<
   | { type: 'entry'; id: string; summary: string }
   | { type: 'group'; key: string; count: number }
@@ -634,85 +619,27 @@ const onGenConfirm = ({
   showGen.value = false;
 };
 
-const onExportPool = () => {
-  const json = JSON.stringify(
-    {
-      version: 1,
-      type: 'choice-pool-export',
-      exportedAt: new Date().toISOString(),
-      data: {
-        master_pool: globalStore.settings.master_pool,
-        configs: globalStore.settings.configs,
-        group_order: globalStore.settings.group_order,
-      },
-    },
-    null,
-    2,
-  );
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `choice-pool-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-const onImportFile = () => fileInput.value?.click();
-
-const onFileSelected = async (e: Event) => {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  // 导入流程诊断：console 输出经 TT「Capture full console logs」进入运行日志（来源 3p:choice），定位完成后精简
-  console.info('[Choice][导入] ① change 触发 | files =', input.files?.length, '| file =', file?.name);
-  if (!file) return;
-  try {
-    const text = await file.text();
-    console.info('[Choice][导入] ② 读取成功 | 长度 =', text.length);
-    const data = JSON.parse(text);
-    console.info('[Choice][导入] ③ 解析成功 | type =', data?.type);
-    if (data?.type !== 'choice-pool-export') {
-      console.error('[Choice][导入] 类型不匹配 | 期望 choice-pool-export | 实际', data?.type);
-      toastr.error(t`文件格式不正确`);
-      return;
-    }
-    importFileData.value = { ...data.data, fileName: file.name, exportedAt: data.exportedAt };
-    showImportPool.value = true;
-    console.info('[Choice][导入] ④ 确认框已请求显示');
-  } catch (err) {
-    console.error('[Choice][导入] 处理异常:', err);
-    toastr.error(`导入失败: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  input.value = '';
-};
-
-const onImportPoolConfirm = (mode: 'merge' | 'replace') => {
-  if (!importFileData.value) return;
-  const { master_pool, configs, group_order } = importFileData.value;
-  if (mode === 'replace') {
-    globalStore.settings.master_pool = master_pool ?? [];
-    globalStore.settings.configs = configs ?? [];
-    globalStore.settings.group_order = group_order ?? [];
-  } else {
-    if (master_pool?.length) globalStore.settings.master_pool.push(...master_pool);
-    if (configs?.length) {
-      for (const cfg of configs) {
-        if (!globalStore.settings.configs.some(c => c.name === cfg.name)) {
-          globalStore.settings.configs.push(cfg);
-        }
-      }
-    }
-    if (group_order?.length) {
-      for (const g of group_order) {
-        if (!globalStore.settings.group_order.includes(g)) {
-          globalStore.settings.group_order.push(g);
-        }
-      }
-    }
-  }
-  showImportPool.value = false;
-  importFileData.value = null;
-  toastr.success(mode === 'replace' ? t`条目库已替换` : t`条目库已合并`);
+const onResetPool = () => {
+  if (!confirm(t`确定要将条目库恢复为出厂默认池（13 组 52 条）吗？\n\n当前条目库与配置将被覆盖，此操作不可撤销。`)) return;
+  const defaults = DEFAULT_MASTER_POOL.map(e => ({ ...e }));
+  const defaultConfig = {
+    id: uuidv4(),
+    name: '默认配置',
+    entries: defaults.map(e => ({
+      entry_id: e.id,
+      pinned: e.pinned,
+      weight: e.weight,
+      condition: e.condition,
+    })),
+    is_default: true,
+    generation: GenerationSettings.parse({}),
+  };
+  globalStore.settings.master_pool = defaults;
+  globalStore.settings.configs = [defaultConfig];
+  globalStore.settings.group_order = [];
+  expanded.value.clear();
+  expandedGroups.value.clear();
+  toastr.success(t`条目库已恢复默认`);
 };
 
 const deleteDialogTitle = computed(() => {

@@ -22,111 +22,12 @@ import { useChatSettingsStore } from '@/store/chat-settings';
 import { useCharacterSettingsStore } from '@/store/character-settings';
 import { detectSTTheme, getSTInkFallback, watchSTTheme } from '@/core/theme-detector';
 import { getStCharacter } from '@/core/st-character';
+import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
 
-/** 构建 10 条默认条目，基于用户定义的选项类型 */
+/** 出厂默认条目池：13 组 52 条（详见 src/core/default-pool.ts 的设计注释）。
+ *  恢复默认 / 全新档案共用此单一事实源。 */
 function buildDefaultEntries(): PoolEntry[] {
-  return [
-    {
-      id: uuidv4(),
-      type: '顺势而为',
-      content: '不预设特定策略，让角色顺着当前情境做出最自然的反应，行动与情绪贴合角色既有性格',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-    {
-      id: uuidv4(),
-      type: '转场推进',
-      content: '用一两句精炼的叙述完成时间跳跃或地点切换，快速进入下一段剧情',
-      pinned: true,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '此项固定生成，不参与随机抽取',
-    },
-    {
-      id: uuidv4(),
-      type: '意外走向',
-      content: '利用当前场景中被忽略的细节或信息差，制造一个意料之外但情理之中的转折',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-    {
-      id: uuidv4(),
-      type: '暧昧触碰',
-      content: '在不逾越角色关系边界的前提下，通过细微的肢体动作或含蓄的暗示拉近情感距离',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-    {
-      id: uuidv4(),
-      type: '他人视角',
-      content: '暂时离开当前角色的视线，以在场另一位角色的眼睛观察同一时刻发生的事情',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-    {
-      id: uuidv4(),
-      type: '就地取材',
-      content: '抓住当前环境中的具体物件或空间特征，做出有目的性的互动行为',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-    {
-      id: uuidv4(),
-      type: '大胆尝试',
-      content: '当常规手段不足以推动局面时，采取一个带有明显风险但可能改变局势走向的行动',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-    {
-      id: uuidv4(),
-      type: '悄然旁观',
-      content: '不主动介入对话，通过眼神、姿态或细微情绪变化传递态度，保持沉默但并非无动于衷',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '此项不涉及对白，纯粹依靠动作与内心活动',
-    },
-    {
-      id: uuidv4(),
-      type: '温暖靠近',
-      content: '通过表达理解、分享类似经历或提供实际帮助，缩短与对方的心理距离',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-    {
-      id: uuidv4(),
-      type: '轻松调侃',
-      content: '用一句俏皮话、一个自嘲的举动或反差感十足的小动作，冲淡空气中的紧张',
-      pinned: false,
-      weight: 1,
-      category: '',
-      condition: '',
-      rule: '',
-    },
-  ];
+  return DEFAULT_MASTER_POOL.map(e => ({ ...e }));
 }
 
 import type {
