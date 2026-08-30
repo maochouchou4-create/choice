@@ -96,31 +96,7 @@
     </div>
 
     <div class="choice-module-toolbar">
-      <div class="choice-module-toolbar-left">
-        <div v-if="globalStore.settings.ui.enrich_enabled" class="choice-mode-switch">
-          <button
-            class="choice-mode-btn"
-            :class="{ 'choice-mode-btn--active': promptMode === 'all' }"
-            @click="promptMode = 'all'"
-          >
-            {{ t`全部` }} ({{ totalCount }})
-          </button>
-          <button
-            class="choice-mode-btn"
-            :class="{ 'choice-mode-btn--active': promptMode === 'option' }"
-            @click="promptMode = 'option'"
-          >
-            {{ t`选项生成` }} ({{ optionCount }})
-          </button>
-          <button
-            class="choice-mode-btn"
-            :class="{ 'choice-mode-btn--active': promptMode === 'enrich' }"
-            @click="promptMode = 'enrich'"
-          >
-            {{ t`润色` }} ({{ enrichCount }})
-          </button>
-        </div>
-      </div>
+      <div class="choice-module-toolbar-left"></div>
       <div class="choice-module-toolbar-right">
         <div class="choice-export-wrap">
           <button
@@ -137,7 +113,7 @@
           <div v-if="showAddMenu" class="choice-export-dropdown">
             <button
               @click="
-                addModule(false, false);
+                addModule(false);
                 showAddMenu = false;
               "
             >
@@ -145,20 +121,11 @@
             </button>
             <button
               @click="
-                addModule(false, true);
+                addModule(true);
                 showAddMenu = false;
               "
             >
               {{ t`选项模块` }}
-            </button>
-            <button
-              v-if="globalStore.settings.ui.enrich_enabled"
-              @click="
-                addModule(true, false);
-                showAddMenu = false;
-              "
-            >
-              {{ t`润色模块` }}
             </button>
           </div>
         </div>
@@ -190,15 +157,6 @@
               "
             >
               {{ t`导出选项模块` }}
-            </button>
-            <button
-              v-if="globalStore.settings.ui.enrich_enabled"
-              @click="
-                exportPrompts('enrich');
-                showExportMenu = false;
-              "
-            >
-              {{ t`导出润色模块` }}
             </button>
           </div>
         </div>
@@ -248,7 +206,6 @@
                 @keydown.escape="cancelRename"
               />
               <span class="choice-module-role" :class="`choice-role-${mod.role}`">{{ mod.role }}</span>
-              <span v-if="mod.enrich_only" class="choice-enrich-badge-sm">{{ t`润色` }}</span>
               <span v-if="mod.option_only" class="choice-option-badge-sm">{{ t`选项` }}</span>
               <span v-if="mod.marker" class="choice-module-lock" :title="t`不可编辑模块`">🔒</span>
             </div>
@@ -382,40 +339,11 @@ const allModules = computed(() => {
   if (!rules.baibai_enabled) {
     modules = modules.filter(m => !BAIBAI_MODULE_IDS.has(m.id));
   }
-  // 润色关闭时强制隐藏所有 enrich_only 模块，忽略 promptMode
-  if (!globalStore.settings.ui.enrich_enabled) {
-    modules = modules.filter(m => !m.enrich_only);
-  } else if (promptMode.value === 'option') {
-    modules = modules.filter(m => !m.enrich_only);
-  } else if (promptMode.value === 'enrich') {
-    modules = modules.filter(m => !m.option_only);
-  }
   return modules;
 });
 
-type PromptMode = 'all' | 'option' | 'enrich';
-const promptMode = ref<PromptMode>('all');
 const showExportMenu = ref(false);
 const showAddMenu = ref(false);
-
-const baibaiFilteredModules = computed(() => {
-  let modules = globalStore.allModules.filter(m => !DEPRECATED_MODULE_IDS.has(m.id));
-  if (!rules.baibai_enabled) {
-    modules = modules.filter(m => !BAIBAI_MODULE_IDS.has(m.id));
-  }
-  return modules;
-});
-
-const totalCount = computed(() => baibaiFilteredModules.value.length);
-const optionCount = computed(() => baibaiFilteredModules.value.filter(m => !m.enrich_only).length);
-const enrichCount = computed(() => baibaiFilteredModules.value.filter(m => !m.option_only).length);
-
-watch(
-  () => globalStore.settings.ui.enrich_enabled,
-  enabled => {
-    if (!enabled) promptMode.value = 'all';
-  },
-);
 
 const editingId = ref<string | null>(null);
 const renamingId = ref<string | null>(null);
@@ -508,8 +436,8 @@ const editingModule = computed(() => {
 const dragIndex = ref<number | null>(null);
 const dragOverIndex = ref<number | null>(null);
 
-const addModule = (enrichOnly = false, optionOnly = false) => {
-  globalStore.addModule(undefined, enrichOnly, optionOnly);
+const addModule = (optionOnly = false) => {
+  globalStore.addModule(undefined, optionOnly);
 };
 
 const resetPromptToDefaults = () => {
@@ -519,13 +447,8 @@ const resetPromptToDefaults = () => {
   toastr.success(t`提示词已恢复为默认值`);
 };
 
-function exportPrompts(mode: 'all' | 'option' | 'enrich' = 'all') {
+function exportPrompts(mode: 'all' | 'option' = 'all') {
   let modules = globalStore.settings.prompt_rules.modules;
-  if (mode === 'option') {
-    modules = modules.filter(m => !m.enrich_only);
-  } else if (mode === 'enrich') {
-    modules = modules.filter(m => !m.option_only);
-  }
   const json = JSON.stringify(
     {
       version: 2,
@@ -546,7 +469,7 @@ function exportPrompts(mode: 'all' | 'option' | 'enrich' = 'all') {
   URL.revokeObjectURL(url);
 }
 
-type ImportFileMode = 'all' | 'option' | 'enrich';
+type ImportFileMode = 'all' | 'option';
 
 const showImportDialog = ref(false);
 const importSummary = ref<{
@@ -577,17 +500,15 @@ function importPrompts() {
         throw new Error('导入的模块中存在重复 ID');
       }
       const mode: ImportFileMode = data.mode || 'all';
-      if (mode !== 'all' && mode !== 'option' && mode !== 'enrich') {
+      if (mode !== 'all' && mode !== 'option') {
         throw new Error(`未知的导入模式：${mode}`);
       }
       const existingModules = globalStore.settings.prompt_rules.modules;
-      // 按文件模式圈定导入范围：option/enrich 导出文件只覆盖对应类模块，对立类现有模块不动
+      // 按文件模式圈定导入范围：option 导出文件只覆盖选项类模块，其余现有模块不动
       const scoped =
         mode === 'all'
           ? importedModules
-          : mode === 'option'
-            ? importedModules.filter(m => !m.enrich_only)
-            : importedModules.filter(m => !m.option_only);
+          : importedModules;
       // 计数为合并模式的预览值：id 命中 → 覆盖，未命中 → 新增，现有中未被导入覆盖的 → 保留
       const existingIds = new Set(existingModules.map(m => m.id));
       const overwriteCount = scoped.filter(m => existingIds.has(m.id)).length;
@@ -995,16 +916,6 @@ onUnmounted(() => {
   font-size: var(--choice-text-xs);
   padding: 2px var(--choice-space-2);
   margin-left: auto;
-}
-
-.choice-enrich-badge-sm {
-  font-size: var(--choice-text-xs);
-  padding: 1px var(--choice-space-2);
-  border-radius: var(--choice-radius-full);
-  background: rgba(var(--choice-primary-rgb), 0.18);
-  color: var(--choice-color-info);
-  font-weight: 500;
-  flex-shrink: 0;
 }
 
 .choice-option-badge-sm {

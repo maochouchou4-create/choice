@@ -9,7 +9,6 @@ import {
   DEFAULT_MODULES,
   SIMPLE_MODULE_CONTENTS,
   BAIBAI_MODULE_IDS,
-  DEFAULT_ENRICH_PERSON_STYLE,
   DEFAULT_PERSON_STYLE,
   DEFAULT_OPTION_RULES,
   USER_INSTRUCTION_DEFAULT,
@@ -164,38 +163,9 @@ const migratePromptModules = (validated: GlobalSettingsType, legacyRegexes: stri
   }
 
   if (version < 9) {
-    // v9: 润色提示词模块化（enrich_prompt 从固定卡片转为模块），user_instruction 标记 option_only
-    const defaults = klona(DEFAULT_MODULES);
-    const existingIds = new Set(validated.prompt_rules.modules.map(m => m.id));
-
-    // 给 user_instruction 设置 option_only
+    // v9: user_instruction 标记 option_only（润色模块化部分已随润色功能移除）
     const ui = validated.prompt_rules.modules.find(m => m.id === 'user_instruction');
     if (ui) ui.option_only = true;
-
-    // 创建 enrich_prompt 模块，内容取旧字段（为空则用默认值）
-    if (!existingIds.has('enrich_prompt')) {
-      const defaultEnrich = defaults.find(m => m.id === 'enrich_prompt');
-      const enrichContent = validated.prompt_rules.enrich_prompt || defaultEnrich?.content || '';
-      validated.prompt_rules.modules.push({
-        id: 'enrich_prompt',
-        name: '润色提示词',
-        role: 'system',
-        content: enrichContent,
-        marker: false,
-        system: false,
-        enabled: true,
-        order: 3,
-        enrich_only: true,
-        option_only: false,
-      });
-    }
-
-    // 将 order >= 3 的现有模块（除 enrich_prompt 外）order +1
-    for (const m of validated.prompt_rules.modules) {
-      if (m.id !== 'enrich_prompt' && m.order >= 3) {
-        m.order += 1;
-      }
-    }
 
     resetOrderFromDefaults(validated);
   }
@@ -271,31 +241,10 @@ const migratePromptModules = (validated: GlobalSettingsType, legacyRegexes: stri
     }
   }
 
-  if (version < 16) {
-    // v16: 追加润色专用模块（规则/输出规格/自检/应答），与选项生成模块完全平行
-    const defaults = klona(DEFAULT_MODULES);
-    const existingIds = new Set(validated.prompt_rules.modules.map(m => m.id));
-    const ENRICH_IDS = new Set(['enrich_core_rules', 'enrich_output_spec', 'enrich_thinking', 'enrich_assistant']);
-    for (const d of defaults) {
-      if (ENRICH_IDS.has(d.id) && !existingIds.has(d.id)) {
-        validated.prompt_rules.modules.push(d);
-      }
-    }
-    // v9 迁移 bug：enrich_prompt role 误写为 'system'，应为 'user'（与 DEFAULT_MODULES 一致）
-    const ep = validated.prompt_rules.modules.find(m => m.id === 'enrich_prompt');
-    if (ep && ep.role === 'system') {
-      ep.role = 'user';
-    }
-  }
-
   if (version < 17) {
     validated.prompt_rules.option_min_chars ??= 30;
     validated.prompt_rules.option_max_chars ??= 80;
-    validated.prompt_rules.enrich_min_chars ??= 30;
-    validated.prompt_rules.enrich_max_chars ??= 80;
-    validated.prompt_rules.enrich_person_style ??= DEFAULT_ENRICH_PERSON_STYLE;
     validated.prompt_rules.option_person ??= '第三人称';
-    validated.prompt_rules.enrich_person ??= '第三人称';
   }
 
   validated.prompt_rules.schema_version = 17;
@@ -329,12 +278,8 @@ const ensureBuiltinPromptConfigs = (validated: GlobalSettingsType) => {
     person_style: pr.person_style ?? '',
     option_rules: pr.option_rules ?? '',
     option_person: pr.option_person ?? '第三人称',
-    enrich_person: pr.enrich_person ?? '第三人称',
-    enrich_person_style: pr.enrich_person_style ?? DEFAULT_ENRICH_PERSON_STYLE,
     option_min_chars: pr.option_min_chars ?? 30,
     option_max_chars: pr.option_max_chars ?? 80,
-    enrich_min_chars: pr.enrich_min_chars ?? 30,
-    enrich_max_chars: pr.enrich_max_chars ?? 80,
     context_rounds: pr.context_rounds ?? 10,
     context_mode: pr.context_mode ?? 'visible_only',
     prefill_enabled: pr.prefill_enabled ?? true,
@@ -357,12 +302,8 @@ const ensureBuiltinPromptConfigs = (validated: GlobalSettingsType) => {
     person_style: '',
     option_rules: '',
     option_person: '第三人称',
-    enrich_person: '第三人称',
-    enrich_person_style: DEFAULT_ENRICH_PERSON_STYLE,
     option_min_chars: 30,
     option_max_chars: 80,
-    enrich_min_chars: 30,
-    enrich_max_chars: 80,
     context_rounds: 10,
     context_mode: 'visible_only',
     prefill_enabled: true,
@@ -376,12 +317,8 @@ const ensureBuiltinPromptConfigs = (validated: GlobalSettingsType) => {
   pr.person_style = '';
   pr.option_rules = '';
   pr.option_person = '第三人称';
-  pr.enrich_person = '第三人称';
-  pr.enrich_person_style = DEFAULT_ENRICH_PERSON_STYLE;
   pr.option_min_chars = 30;
   pr.option_max_chars = 80;
-  pr.enrich_min_chars = 30;
-  pr.enrich_max_chars = 80;
   pr.context_rounds = 10;
   pr.context_mode = 'visible_only';
   pr.prefill_enabled = true;
@@ -419,12 +356,8 @@ const ensureDefaultPromptConfig = (validated: GlobalSettingsType) => {
       person_style: pr.person_style ?? '',
       option_rules: pr.option_rules ?? '',
       option_person: pr.option_person ?? '第三人称',
-      enrich_person: pr.enrich_person ?? '第三人称',
-      enrich_person_style: pr.enrich_person_style ?? DEFAULT_ENRICH_PERSON_STYLE,
       option_min_chars: pr.option_min_chars ?? 30,
       option_max_chars: pr.option_max_chars ?? 80,
-      enrich_min_chars: pr.enrich_min_chars ?? 30,
-      enrich_max_chars: pr.enrich_max_chars ?? 80,
       context_rounds: pr.context_rounds ?? 10,
       context_mode: pr.context_mode ?? 'visible_only',
       prefill_enabled: pr.prefill_enabled ?? true,
@@ -487,6 +420,7 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
+          candidate_multiplier: 2,
         },
       });
     }
@@ -503,6 +437,7 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
+          candidate_multiplier: 2,
         },
       });
       try {
@@ -530,6 +465,7 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
+          candidate_multiplier: 2,
         },
       });
       try {
@@ -563,6 +499,7 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
+          candidate_multiplier: 2,
         },
       });
     }
@@ -624,6 +561,7 @@ const applyDefaults = (validated: GlobalSettingsType) => {
             categories_enabled: true,
             shuffle_final: true,
             pinned_overflow: 'send_all',
+            candidate_multiplier: 2,
           },
         },
       ];
@@ -691,12 +629,6 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
       e.rule = '';
       delete e.text;
     }
-  }
-
-  // enrich_count 从 number 转 string（预校验迁移，必须在 Zod 验证前执行）
-  const rawUI = _.get(existing, 'ui');
-  if (rawUI && typeof rawUI.enrich_count === 'number') {
-    rawUI.enrich_count = String(rawUI.enrich_count);
   }
 
   // 注意：曾有一个 v14 迁移块把 chat_filter_groups.character_id 从字符串转 number，
@@ -824,10 +756,10 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
 
   // _afterId 为预留参数：产品上支持"在指定模块后插入"，当前实现一律追加到末尾；
   // 保留参数位避免调用方（传 undefined 占位）与未来实现一起改动
-  function addModule(_afterId?: string, enrichOnly = false, optionOnly = false) {
+  function addModule(_afterId?: string, optionOnly = false) {
     const modules = settings.value.prompt_rules.modules;
     const maxOrder = modules.length ? Math.max(...modules.map(m => m.order)) : -1;
-    const name = optionOnly ? '选项模块' : enrichOnly ? '润色模块' : '通用模块';
+    const name = optionOnly ? '选项模块' : '通用模块';
     const newModule: PromptModuleType = {
       id: uuidv4(),
       name,
@@ -837,7 +769,6 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
       system: false,
       enabled: true,
       order: maxOrder + 1,
-      enrich_only: enrichOnly,
       option_only: optionOnly,
     };
     modules.push(newModule);
@@ -1018,12 +949,8 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
     config.person_style = pr.person_style;
     config.option_rules = pr.option_rules;
     config.option_person = pr.option_person;
-    config.enrich_person = pr.enrich_person;
-    config.enrich_person_style = pr.enrich_person_style;
     config.option_min_chars = pr.option_min_chars;
     config.option_max_chars = pr.option_max_chars;
-    config.enrich_min_chars = pr.enrich_min_chars;
-    config.enrich_max_chars = pr.enrich_max_chars;
     config.context_rounds = pr.context_rounds;
     config.context_mode = pr.context_mode;
     config.prefill_enabled = pr.prefill_enabled;
@@ -1043,12 +970,8 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
     pr.person_style = config.person_style;
     pr.option_rules = config.option_rules;
     pr.option_person = config.option_person;
-    pr.enrich_person = config.enrich_person;
-    pr.enrich_person_style = config.enrich_person_style;
     pr.option_min_chars = config.option_min_chars;
     pr.option_max_chars = config.option_max_chars;
-    pr.enrich_min_chars = config.enrich_min_chars;
-    pr.enrich_max_chars = config.enrich_max_chars;
     pr.context_rounds = config.context_rounds;
     pr.context_mode = config.context_mode;
     pr.prefill_enabled = config.prefill_enabled;
@@ -1087,12 +1010,8 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
       person_style: settings.value.prompt_rules.person_style,
       option_rules: settings.value.prompt_rules.option_rules,
       option_person: settings.value.prompt_rules.option_person,
-      enrich_person: settings.value.prompt_rules.enrich_person,
-      enrich_person_style: settings.value.prompt_rules.enrich_person_style,
       option_min_chars: settings.value.prompt_rules.option_min_chars,
       option_max_chars: settings.value.prompt_rules.option_max_chars,
-      enrich_min_chars: settings.value.prompt_rules.enrich_min_chars,
-      enrich_max_chars: settings.value.prompt_rules.enrich_max_chars,
       context_rounds: settings.value.prompt_rules.context_rounds,
       context_mode: settings.value.prompt_rules.context_mode,
       prefill_enabled: settings.value.prompt_rules.prefill_enabled,
@@ -1206,6 +1125,7 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
           categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
+          candidate_multiplier: 2,
         },
       },
     ];

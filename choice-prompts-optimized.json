@@ -34,17 +34,6 @@
       "option_only": true
     },
     {
-      "id": "enrich_prompt",
-      "name": "润色提示词",
-      "role": "user",
-      "content": "【任务：输入润色】请将下方【用户输入】润色扩展为 {{count}} 个版本。保留原意和语气，通过重新措辞和扩展表达使内容更丰富生动。如果原文包含简短对白，也应对对白本身进行润色扩展，使其更生动自然，严禁原样照搬。{{count}} 个版本之间在描写方式、措辞风格上应有明显差异，避免全部雷同。\n\n【用户输入】\n{{input}}\n\n【输出格式】\n先输出 <thinking> 自检分析，再输出 <options> 包裹的 {{count}} 个版本，每行格式为 \"[标题]内容\"。严禁在版本内容中使用[]符号。详细规则与规格见系统消息。",
-      "marker": false,
-      "system": false,
-      "enabled": true,
-      "order": 3,
-      "enrich_only": true
-    },
-    {
       "id": "reference_open",
       "name": "参考开始",
       "role": "system",
@@ -217,50 +206,6 @@
       "enabled": true,
       "order": 20,
       "option_only": true
-    },
-    {
-      "id": "enrich_core_rules",
-      "name": "润色规则",
-      "role": "system",
-      "content": "【润色规则】\n1. 保留原文语义和语气，用不同措辞重新表达。\n2. 对白保持直接引语形式，但内容应润色扩展，严禁原样照搬。\n3. 每个版本字数控制在 {{min_chars}}-{{max_chars}} 个中文字符。\n4. 格式要求见【润色输出规格】。",
-      "marker": false,
-      "system": false,
-      "enabled": true,
-      "order": 21,
-      "enrich_only": true
-    },
-    {
-      "id": "enrich_output_spec",
-      "name": "润色输出规格",
-      "role": "system",
-      "content": "【润色输出规格】\n\n数量：恰好 {{count}} 个版本，不多不少。\n\n字数：每个版本字数控制在 {{min_chars}}-{{max_chars}} 个中文字符之间。\n\n格式：每行一个版本，格式为 \"[标题]内容\"\n- 标题：简洁概括该版本的风格或特点，用[]包裹\n- 正文：润色后的完整句子，不含编号或额外标注，严禁使用[]符号\n\n输出结构：\n1. 先输出完整的 <thinking> 分析块\n2. 再输出 <options> 选项块，每个版本独占一行\n3. 两者之外不得有任何文字",
-      "marker": false,
-      "system": false,
-      "enabled": true,
-      "order": 22,
-      "enrich_only": true
-    },
-    {
-      "id": "enrich_thinking",
-      "name": "润色自检",
-      "role": "system",
-      "content": "【润色前自检 - 全部内容须包裹在 <thinking> 标签内】\n第一行必须用引号完整复述【用户输入】的原文，确认已正确接收。\n1. 版本数量是否等于 {{count}}？\n2. 格式是否为\"[标题]内容\"？内容中是否误用了[]符号？\n3. 每个版本字数是否在 {{min_chars}}-{{max_chars}} 个中文字符之间？\n完成以上自检后，直接输出润色结果。",
-      "marker": false,
-      "system": false,
-      "enabled": true,
-      "order": 23,
-      "enrich_only": true
-    },
-    {
-      "id": "enrich_assistant",
-      "name": "润色应答",
-      "role": "assistant",
-      "content": "好的，开始处理润色任务，先逐条理解原文并自检人称、字数、忠实度。\n\n<thinking>\n",
-      "marker": false,
-      "system": false,
-      "enabled": true,
-      "order": 24,
-      "enrich_only": true
     }
   ]
 }

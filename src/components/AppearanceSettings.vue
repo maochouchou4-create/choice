@@ -15,20 +15,6 @@
     </div>
 
     <div class="choice-appearance-section">
-      <span class="choice-appearance-section-title">{{ t`输入润色` }}</span>
-      <div class="choice-behavior-grid">
-        <label class="choice-check">
-          <input v-model="ui.enrich_enabled" type="checkbox" :title="t`在发送消息前用 AI 改写为多个润色版本`" />
-          <span class="choice-check-custom"></span>
-          <span class="choice-check-label">
-            <strong>{{ t`启用输入润色` }}</strong>
-            <small>{{ t`发送消息前用 AI 改写为多个润色版本` }}</small>
-          </span>
-        </label>
-      </div>
-    </div>
-
-    <div class="choice-appearance-section">
       <span class="choice-appearance-section-title">{{ t`主题` }}</span>
       <div class="choice-theme-switch">
         <button
@@ -193,15 +179,6 @@ const fontSizes = [
 .choice-check-label small {
   font-size: var(--choice-text-xs);
   color: var(--choice-text-muted);
-}
-
-.choice-enrich-count {
-  display: flex;
-  align-items: center;
-  gap: var(--choice-space-2);
-  padding: var(--choice-space-2) var(--choice-space-3);
-  background: var(--choice-bg-card);
-  border-radius: var(--choice-radius-md);
 }
 
 .choice-appearance-label {

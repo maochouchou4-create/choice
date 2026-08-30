@@ -16,8 +16,6 @@ export type ChoiceGeneration = {
 export type MessageChoiceData = {
   generations: ChoiceGeneration[];
   currentIndex: number;
-  enrichGenerations: ChoiceGeneration[];
-  enrichCurrentIndex: number;
 };
 
 const getMessage = (messageId: number): StChatMessage | undefined => chat[messageId] as StChatMessage | undefined;
@@ -50,23 +48,8 @@ export function storeGeneration(messageId: number, swipeId: number, generation: 
   const data = getMessageChoiceData(messageId, swipeId) ?? {
     generations: [],
     currentIndex: 0,
-    enrichGenerations: [],
-    enrichCurrentIndex: 0,
   };
   data.generations.push(generation);
   data.currentIndex = data.generations.length - 1;
-  setMessageChoiceData(messageId, swipeId, data);
-}
-
-export function storeEnrichGeneration(messageId: number, swipeId: number, generation: ChoiceGeneration) {
-  const data = getMessageChoiceData(messageId, swipeId) ?? {
-    generations: [],
-    currentIndex: 0,
-    enrichGenerations: [],
-    enrichCurrentIndex: 0,
-  };
-  data.enrichGenerations = data.enrichGenerations ?? [];
-  data.enrichGenerations.push(generation);
-  data.enrichCurrentIndex = data.enrichGenerations.length - 1;
   setMessageChoiceData(messageId, swipeId, data);
 }

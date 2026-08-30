@@ -61,7 +61,7 @@ const props = defineProps<{
   open: boolean;
   summary: {
     fileName: string;
-    mode: 'all' | 'option' | 'enrich';
+    mode: 'all' | 'option';
     overwriteCount: number;
     addCount: number;
     keptCount: number;
@@ -80,8 +80,6 @@ const modeLabel = computed(() => {
   switch (props.summary?.mode) {
     case 'option':
       return t`仅选项模块`;
-    case 'enrich':
-      return t`仅润色模块`;
     default:
       return t`全部模块`;
   }

@@ -170,7 +170,7 @@ const globalExcludedBooks = computed(() => globalStore.settings.world_info.globa
 
 const availableGlobalExclBooks = computed(() => {
   const excluded = new Set(globalExcludedBooks.value);
-  return (world_names ?? []).filter(name => !excluded.has(name));
+  return (world_names ?? []).filter((name: string) => !excluded.has(name));
 });
 
 const isBookGloballyExcluded = (book: BookInfo) =>

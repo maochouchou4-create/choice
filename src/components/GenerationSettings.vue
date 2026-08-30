@@ -66,10 +66,6 @@
             :placeholder="t`如 5`"
           />
         </label>
-        <label class="choice-count-item">
-          <span>{{ t`润色版本数` }}</span>
-          <input v-model="ui.enrich_count" class="text_pole" style="width: 80px" :placeholder="t`如 4`" />
-        </label>
       </div>
     </div>
 
@@ -78,7 +74,7 @@
         <div class="choice-field-label">
           <label>{{ t`每条字数` }}</label>
         </div>
-        <small class="choice-field-hint">{{ t`控制每条选项/润色版本的字数区间（中文字符）` }}</small>
+        <small class="choice-field-hint">{{ t`控制每条选项的字数区间（中文字符）` }}</small>
       </div>
       <div class="choice-count-row">
         <label class="choice-count-item">
@@ -101,26 +97,6 @@
             max="500"
           />
         </label>
-        <label class="choice-count-item">
-          <span>{{ t`润色` }}</span>
-          <input
-            v-model.number="rules.enrich_min_chars"
-            class="text_pole"
-            style="width: 60px"
-            type="number"
-            min="10"
-            max="500"
-          />
-          <span>-</span>
-          <input
-            v-model.number="rules.enrich_max_chars"
-            class="text_pole"
-            style="width: 60px"
-            type="number"
-            min="10"
-            max="500"
-          />
-        </label>
       </div>
     </div>
 
@@ -129,16 +105,12 @@
         <div class="choice-field-label">
           <label>{{ t`人称视角` }}</label>
         </div>
-        <small class="choice-field-hint">{{ t`选项和润色输出的人称，如"第三人称"或"第一人称"` }}</small>
+        <small class="choice-field-hint">{{ t`选项输出的人称，如"第三人称"或"第一人称"` }}</small>
       </div>
       <div class="choice-count-row">
         <label class="choice-count-item">
           <span>{{ t`选项人称` }}</span>
           <input v-model="rules.option_person" class="text_pole" style="width: 100px" :placeholder="t`如：第三人称`" />
-        </label>
-        <label class="choice-count-item">
-          <span>{{ t`润色人称` }}</span>
-          <input v-model="rules.enrich_person" class="text_pole" style="width: 100px" :placeholder="t`如：第三人称`" />
         </label>
       </div>
     </div>
@@ -149,7 +121,6 @@
 import { useGlobalSettingsStore } from '@/store/global-settings';
 
 const gs = useGlobalSettingsStore();
-const ui = gs.settings.ui;
 const rules = gs.settings.prompt_rules;
 </script>
 

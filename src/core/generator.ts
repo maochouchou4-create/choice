@@ -57,9 +57,7 @@ export type Ctx = {
   input: string;
   minChars: number;
   maxChars: number;
-  enrichPersonStyle: string;
   optionPerson: string;
-  enrichPerson: string;
 };
 const sub = (t: string, c: Ctx) =>
   t
@@ -73,28 +71,22 @@ const sub = (t: string, c: Ctx) =>
     .replaceAll('{{input}}', c.input)
     .replaceAll('{{min_chars}}', String(c.minChars))
     .replaceAll('{{max_chars}}', String(c.maxChars))
-    .replaceAll('{{enrich_person_style}}', c.enrichPersonStyle)
-    .replaceAll('{{option_person}}', c.optionPerson)
-    .replaceAll('{{enrich_person}}', c.enrichPerson);
+    .replaceAll('{{option_person}}', c.optionPerson);
 
 export const buildMessages = async (
   modules: PromptModule[],
   ctx: Ctx,
   wi: WorldInfoGlobalSettings,
   contextRounds: number,
-  isEnrich = false,
 ): Promise<ChatMsg[]> => {
   const gs = useGlobalSettingsStore();
   const prefillEnabled = gs.settings.prompt_rules.prefill_enabled;
   const pr = gs.settings.prompt_rules;
   const augmentedCtx: Ctx = {
     ...ctx,
-    minChars: isEnrich ? pr.enrich_min_chars : pr.option_min_chars,
-    maxChars: isEnrich ? pr.enrich_max_chars : pr.option_max_chars,
-    enrichPersonStyle:
-      pr.enrich_person_style || (pr.enrich_person ? `统一使用${pr.enrich_person} {{user}} 为主语` : ''),
+    minChars: pr.option_min_chars,
+    maxChars: pr.option_max_chars,
     optionPerson: pr.option_person || '第三人称',
-    enrichPerson: pr.enrich_person || '第三人称',
   };
   const msgs: ChatMsg[] = [];
   const wiBuckets = wi.enabled ? await buildWI() : null;
@@ -104,7 +96,6 @@ export const buildMessages = async (
   for (const mod of sorted) {
     if (!mod.enabled) continue;
     if (!prefillEnabled && mod.role === 'assistant') continue;
-    if (isEnrich && mod.option_only) continue;
 
     switch (mod.id) {
       case 'system_prompt': {
@@ -532,15 +523,13 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
       input: '',
       minChars: 30,
       maxChars: 80,
-      enrichPersonStyle: '',
       optionPerson: '第三人称',
-      enrichPerson: '第三人称',
     };
     const rules = gs.settings.prompt_rules;
 
-    let enabledModules = gs.sortedEnabledModules.filter(m => !m.enrich_only);
+    let enabledModules = gs.sortedEnabledModules;
     if (!enabledModules || enabledModules.length === 0) {
-      enabledModules = [...DEFAULT_MODULES].filter(m => !m.enrich_only).sort((a, b) => a.order - b.order);
+      enabledModules = [...DEFAULT_MODULES].sort((a, b) => a.order - b.order);
     }
     let messages = await buildMessages(enabledModules, c, gwi, rules.context_rounds);
 

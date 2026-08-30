@@ -95,9 +95,6 @@ export const DEFAULT_OPTION_RULES = `1. 独立与防越权：选项独立于正�
 5. 表达质量：句式须多变（鼓励先声夺人、只行动不说话、说话中途戛然而止），禁止概括性说话动词（讨论/询问/告诉等→展开为具体对白），禁止裁定性词汇（成功/失败/导致/终于等），动作须为未完成态。
 6. 留白收尾：收尾可悬在半空、抛出反问、转身欲走，把反应权留给正文；允许简要说明行动内在动机。`;
 
-/** 润色人称默认值 */
-export const DEFAULT_ENRICH_PERSON_STYLE = '统一使用{{enrich_person}} {{user}} 为主语';
-
 export const PromptModule = z.object({
   id: z.string(),
   name: z.string(),
@@ -107,7 +104,6 @@ export const PromptModule = z.object({
   system: z.boolean(),
   enabled: z.boolean().default(true),
   order: z.number().min(0),
-  enrich_only: z.boolean().default(false),
   option_only: z.boolean().default(false),
 });
 export type PromptModule = z.infer<typeof PromptModule>;
@@ -121,12 +117,8 @@ export const PromptConfig = z
     person_style: z.string().default(''),
     option_rules: z.string().default(''),
     option_person: z.string().default('第三人称'),
-    enrich_person: z.string().default('第三人称'),
-    enrich_person_style: z.string().default('统一使用{{enrich_person}} {{user}} 为主语'),
     option_min_chars: z.number().min(10).max(500).default(30),
     option_max_chars: z.number().min(10).max(500).default(80),
-    enrich_min_chars: z.number().min(10).max(500).default(30),
-    enrich_max_chars: z.number().min(10).max(500).default(80),
     context_rounds: z.number().min(0).default(10),
     context_mode: z.enum(['rounds', 'visible_only']).default('visible_only'),
     prefill_enabled: z.boolean().default(true),
@@ -146,9 +138,9 @@ export const USER_INSTRUCTION_DEFAULT =
 
 /** 「简洁」基准内容涉及的模块 id。默认提示词（choice-prompts-optimized.json）本身就是简洁版，
  *  这里只圈出 v19 迁移简化映射涉及的四个模块，供提取单一事实源。 */
-export const SIMPLE_MODULE_IDS = new Set(['core_rules', 'thinking_prompt', 'enrich_core_rules', 'enrich_thinking']);
+export const SIMPLE_MODULE_IDS = new Set(['core_rules', 'thinking_prompt']);
 
-/** 「简洁」基准内容（core_rules/thinking_prompt/enrich_core_rules/enrich_thinking）。
+/** 「简洁」基准内容（core_rules/thinking_prompt）。
  *  单一事实源：从 DEFAULT_MODULES 派生，v19 老存档迁移的简化映射复用它，
  *  避免 JSON 与迁移代码两处文本漂移——JSON 改了这里自动跟随。 */
 export const SIMPLE_MODULE_CONTENTS: Readonly<Record<string, string>> = Object.fromEntries(
@@ -247,20 +239,10 @@ export const PromptRules = z
     option_rules: z.string().default(DEFAULT_OPTION_RULES),
     /** 选项人称（简单值），显示在生成页面。person_style 非空时优先 */
     option_person: z.string().default('第三人称'),
-    /** 润色人称（简单值），显示在生成页面。enrich_person_style 非空时优先 */
-    enrich_person: z.string().default('第三人称'),
-    /** 输入润色提示词模板，使用 {{input}} 占位替代用户输入 */
-    enrich_prompt: z.string().default(''),
     /** 选项字数下限 */
     option_min_chars: z.number().min(10).max(500).default(30),
     /** 选项字数上限 */
     option_max_chars: z.number().min(10).max(500).default(80),
-    /** 润色字数下限 */
-    enrich_min_chars: z.number().min(10).max(500).default(30),
-    /** 润色字数上限 */
-    enrich_max_chars: z.number().min(10).max(500).default(80),
-    /** 润色人称视角，自由文本，通过 {{enrich_person_style}} 占位符注入 enrich_core_rules 模块 */
-    enrich_person_style: z.string().default('统一使用{{enrich_person}} {{user}} 为主语'),
     schema_version: z.number().default(0),
   })
   .prefault({});
@@ -308,8 +290,6 @@ export type WorldInfoChatSettings = z.infer<typeof WorldInfoChatSettings>;
 export const UISettings = z
   .object({
     floating_enabled: z.boolean().default(true),
-    enrich_enabled: z.boolean().default(true),
-    enrich_count: z.string().default('4'),
     /** @deprecated 已迁移到 theme_mode，保留用于向后兼容迁移 */
     theme: z.enum(['dark', 'light']).optional(),
     /** 主题模式：auto = 自动检测 ST 亮/暗，st = 完全跟随 ST 配色，dark/light = 手动覆盖 */

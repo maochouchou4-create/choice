@@ -1,8 +1,8 @@
 import type { PoolEntry } from './settings';
 
-/** 条目池出厂默认：13 组 52 条（含 1 条 pinned 转场推进）。
+/** 条目池出厂默认：12 组 49 条（含 1 条 pinned 转场推进）。
  *  设计要点：分组即多样性单位（分组抽取开启时每轮从不同组轮抽）；
- *  场景性强的条目挂自由文本条件交由生成 AI 终选；冷门重口味组（黑暗抉择等）条目少即出场率低。 */
+ *  场景性强的条目挂自由文本条件交由生成 AI 终选；冷门重口味组条目少即出场率低。 */
 export const DEFAULT_MASTER_POOL: PoolEntry[] = [
   {
     'id': '06281157-6887-483e-b9e8-a00f1f2f646e\r',
@@ -494,36 +494,6 @@ export const DEFAULT_MASTER_POOL: PoolEntry[] = [
     'category': '冒险高能',
     'condition': ''
   },
-  {
-    'id': '0a3736e9-ef34-4175-88ee-19452b24fe98\r',
-    'type': '黑暗真相',
-    'content': '直面或揭露一个残酷的真相——关于世界、他人或自己——哪怕代价是当下的安宁',
-    'rule': '',
-    'pinned': false,
-    'weight': 1,
-    'category': '黑暗抉择',
-    'condition': '剧情中确实存在尚未揭破的残酷事实'
-  },
-  {
-    'id': '5b43b091-ee0c-4d7f-9406-63de7af2d2e4\r',
-    'type': '道德困境',
-    'content': '面对一个两难的取舍——诚实与仁慈、大义与私情——做出选择并承担其重量',
-    'rule': '困境的两个选项须都真实有代价，不设轻松的第三条路',
-    'pinned': false,
-    'weight': 1,
-    'category': '黑暗抉择',
-    'condition': ''
-  },
-  {
-    'id': 'a0c02176-a289-4f06-afaf-865308ce86d0\r',
-    'type': '背叛抉择',
-    'content': '在利益、生存或更大的图谋面前，做出背叛信任的决定，或直面他人对自己的背叛',
-    'rule': '',
-    'pinned': false,
-    'weight': 1,
-    'category': '黑暗抉择',
-    'condition': '剧情已积累起可被辜负的信任关系'
-  }
 ];
 
 export const DEFAULT_POOL_CONFIGS = [
