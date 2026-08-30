@@ -15,10 +15,11 @@ const externals = {
   '@popperjs/core': 'Popper',
 } as const;
 
-const relative_sillytavern_path = path.relative(
-  path.join(__dirname, 'dist'),
-  __dirname.substring(0, __dirname.lastIndexOf('public') + 6),
-);
+// 运行时外部导入的酒馆根路径（相对 dist）：ST 本体布局与 TauriTavern 布局的 URL 深度一致
+// （/scripts/extensions/third-party/<name>/dist/），均为 5 级向上。
+// 不能按源码路径里的 'public' 字样反推——仓库独立克隆时（如 D:\code\repos\choice）没有该路径段，
+// 会算出错误相对路径，导致扩展在酒馆里无法加载。
+const relative_sillytavern_path = '../../../../..';
 
 export default defineConfig(({ mode }) => ({
   plugins: [
