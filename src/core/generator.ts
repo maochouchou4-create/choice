@@ -37,14 +37,8 @@ export const poolGenState = reactive({ loading: false });
 let poolGenController: AbortController | null = null;
 
 export const resolveCount = (cm: string): number => {
-  const s = cm.trim();
-  const rangeMatch = s.match(/^(\d+)\s*-\s*(\d+)$/);
-  if (rangeMatch) {
-    const min = parseInt(rangeMatch[1], 10);
-    const max = parseInt(rangeMatch[2], 10);
-    return min + Math.floor(Math.random() * (max - min + 1));
-  }
-  const n = parseInt(s, 10);
+  // 仅支持固定数量；历史上的区间写法（如 3-6）取前值兜底，不再随机
+  const n = parseInt(cm.trim(), 10);
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
@@ -54,6 +48,10 @@ export const resolveCustomApi = (id: string, apis: SecondaryApi[]): SecondaryApi
 export type Ctx = {
   count: number;
   pinnedCount: number;
+  /** 本轮实际发送的候选条目数（超发后的值，≥ 挑选数） */
+  candidateCount: number;
+  /** AI 需从候选中终选的条数（= count - pinnedCount） */
+  pickCount: number;
   pinned: string;
   poolSelected: string;
   input: string;
@@ -67,6 +65,8 @@ const sub = (t: string, c: Ctx) =>
   t
     .replaceAll('{{count}}', String(c.count))
     .replaceAll('{{pinned_count}}', String(c.pinnedCount))
+    .replaceAll('{{candidate_count}}', String(c.candidateCount))
+    .replaceAll('{{pick_count}}', String(c.pickCount))
     .replaceAll('{{count_minus_1}}', String(Math.max(0, c.count - 1)))
     .replaceAll('{{pinned}}', c.pinned)
     .replaceAll('{{pool_selected}}', c.poolSelected)
@@ -495,14 +495,18 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
     // ?? 兜底：无命中 config（effectiveConfig 为 null）时用 schema 默认生成参数，
     // 不硬编码字面量——默认值曾与真实 schema 默认相反，改 schema 后这里自动跟随
     const gen = ps.effectiveConfig?.generation ?? GenerationSettings.parse({});
+    // 候选超发：抽签数量 = 目标数量 × 倍数，由生成 AI 从候选中终选，
+    // 避免"抽到不合场景的组、AI 只能跳过、本轮缺条"
+    const multiplier = Math.min(3, Math.max(1, Math.round(gen.candidate_multiplier || 1)));
     const pool = resolvePool({
       effectivePool: ps.effectivePool,
-      count,
+      count: count * multiplier,
       categoriesEnabled: gen.categories_enabled,
       shuffleFinal: gen.shuffle_final,
       pinnedOverflow: gen.pinned_overflow,
     });
     const pinnedCount = pool.pinned.length;
+    const pickCount = Math.max(0, count - pinnedCount);
     const poolSelectedText = pool.drawn
       .map(e => {
         let line = e.type;
@@ -515,6 +519,8 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
     const c: Ctx = {
       count,
       pinnedCount,
+      candidateCount: pool.drawn.length,
+      pickCount,
       pinned: pool.pinned
         .map(e => {
           let line = e.type;

@@ -73,6 +73,14 @@
             {{ t`打乱结果` }}
           </label>
           <label class="choice-inline-gen-item">
+            <span :title="t`候选条目按目标数量的倍数抽取，由生成 AI 从中终选，过滤不合场景的条目`">{{ t`候选超发` }}</span>
+            <select v-model.number="selectedConfig.generation.candidate_multiplier" class="text_pole">
+              <option :value="1">{{ t`关闭` }}</option>
+              <option :value="2">×2</option>
+              <option :value="3">×3</option>
+            </select>
+          </label>
+          <label class="choice-inline-gen-item">
             <span :title="t`固定条目超过数量上限时：全发=全部保留，截断=只取前N个`">{{ t`固定溢出` }}</span>
             <select v-model="selectedConfig.generation.pinned_overflow" class="text_pole">
               <option value="send_all">{{ t`全发` }}</option>

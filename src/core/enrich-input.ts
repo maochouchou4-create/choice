@@ -50,6 +50,8 @@ export async function enrichUserInput(input: string): Promise<string[]> {
   const enrichCtx: Ctx = {
     count: enrichCount,
     pinnedCount: 0,
+    candidateCount: 0,
+    pickCount: enrichCount,
     pinned: '',
     poolSelected: '',
     input,

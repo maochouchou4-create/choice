@@ -28,6 +28,8 @@ export const GenerationSettings = z
     shuffle_final: z.boolean().default(true),
     pinned_overflow: z.enum(['send_all', 'trim']).default('send_all'),
     cross_layer_fallback: z.boolean().default(false),
+    // 候选超发倍数：抽签数 = 目标条数 × 倍数，超发候选由生成 AI 终选，过滤不合场景的条目
+    candidate_multiplier: z.number().int().min(1).max(3).default(2),
   })
   .prefault({});
 export type GenerationSettings = z.infer<typeof GenerationSettings>;
@@ -134,23 +136,14 @@ export const PromptConfig = z
   .prefault(() => ({ id: '', name: '' }));
 export type PromptConfig = z.infer<typeof PromptConfig>;
 
-export const USER_INSTRUCTION_DEFAULT = `请为角色的当前处境生成恰好 {{count}} 条行动选项。
-
-固定条目（共 {{pinned_count}} 条）：
-{{pinned}}
-
-可选条目（根据 [条件] 标记判断是否适用当前上下文）：
-{{pool_selected}}
-
-生成规则：
-1. 生成选项的类型、切入点、情绪态度均应有明显差异
-2. 每个选项独立生成"标题"与"内容"两部分，格式约束见系统规则
-3. 可选条目可能附带 [条件: xxx] 标记，仅当当前聊天上下文符合条件描述时才使用该条目
-4. 输出时严格遵守输出纯净度铁律，先输出 <thinking> 分析，再输出 <options> 选项，每个选项独占一行`;
-
 // JSON 导入的 role 推断为 string，与 PromptModule 的字面量联合不兼容；内容受构建期 JSON 约束，
 // 此处断言安全（若 JSON 里 role 拼错，运行时由 zod 解析/生成流程兜底）
 export const DEFAULT_MODULES = defaultModulesJson.modules as unknown as PromptModule[];
+
+// 单一事实源：user_instruction 默认文本以 choice-prompts-optimized.json 为准派生，
+// 避免两处文本漂移（历史上这里曾手写短版，与 JSON 长版不一致）
+export const USER_INSTRUCTION_DEFAULT =
+  DEFAULT_MODULES.find(m => m.id === 'user_instruction')?.content ?? '';
 
 /** 「简洁」基准内容涉及的模块 id。默认提示词（choice-prompts-optimized.json）本身就是简洁版，
  *  这里只圈出 v19 迁移简化映射涉及的四个模块，供提取单一事实源。 */

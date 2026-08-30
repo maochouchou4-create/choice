@@ -54,7 +54,7 @@
         <div class="choice-field-label">
           <label>{{ t`生成数量` }}</label>
         </div>
-        <small class="choice-field-hint">{{ t`数字=固定数量，区间=每次随机（如 3-6）` }}</small>
+        <small class="choice-field-hint">{{ t`固定数量（如 5）` }}</small>
       </div>
       <div class="choice-count-row">
         <label class="choice-count-item">
@@ -63,12 +63,12 @@
             v-model="gs.settings.global_count_mode"
             class="text_pole"
             style="width: 80px"
-            :placeholder="t`如 4 或 3-6`"
+            :placeholder="t`如 5`"
           />
         </label>
         <label class="choice-count-item">
           <span>{{ t`润色版本数` }}</span>
-          <input v-model="ui.enrich_count" class="text_pole" style="width: 80px" :placeholder="t`如 4 或 3-6`" />
+          <input v-model="ui.enrich_count" class="text_pole" style="width: 80px" :placeholder="t`如 4`" />
         </label>
       </div>
     </div>
