@@ -107,6 +107,89 @@ const formatDate = (iso: string | undefined) => {
 </script>
 
 <style scoped>
+/* 修复：此前借用 ConfirmDialog 的 .choice-cfdlg-* 类名，但 scoped 样式不跨组件生效，
+   导致导入确认框以无样式裸节点渲染在 body 末尾、视觉上"不弹出"。此处补齐全套外壳样式。 */
+.choice-cfdlg-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: var(--choice-z-dialog);
+  background: var(--choice-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.choice-cfdlg-dialog {
+  width: 460px;
+  max-width: 92vw;
+  background: var(--choice-bg-panel);
+  border: 1px solid var(--choice-border);
+  border-radius: var(--choice-radius-lg);
+  box-shadow:
+    inset 0 1px 0 var(--choice-frost-line),
+    var(--choice-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.choice-cfdlg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--choice-space-3) var(--choice-space-4);
+  background: linear-gradient(180deg, rgba(220, 140, 80, 0.08), transparent);
+  border-bottom: 1px solid var(--choice-border);
+}
+
+.choice-cfdlg-title {
+  font-size: var(--choice-text-base);
+  font-weight: bold;
+  color: var(--choice-text);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--choice-space-2);
+}
+
+.choice-cfdlg-close {
+  background: none;
+  border: none;
+  color: var(--choice-text-muted);
+  font-size: var(--choice-text-xl);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 var(--choice-space-1);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--choice-transition),
+    color var(--choice-transition);
+}
+
+.choice-cfdlg-close:hover {
+  background: var(--choice-bg-hover);
+  color: var(--choice-text);
+}
+
+.choice-cfdlg-body {
+  padding: var(--choice-space-4);
+}
+
+.choice-cfdlg-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--choice-space-2);
+  border-top: 1px solid var(--choice-border);
+  padding: var(--choice-space-3) var(--choice-space-4);
+}
+
 .import-dlg-info {
   width: 100%;
   border-collapse: collapse;
