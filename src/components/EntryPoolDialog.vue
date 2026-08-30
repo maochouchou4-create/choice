@@ -661,19 +661,30 @@ const onExportPool = () => {
 const onImportFile = () => fileInput.value?.click();
 
 const onFileSelected = async (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  // 导入诊断埋点：定位"选完文件无反应"断在哪一步，问题修复后移除
+  console.info('[Choice][导入诊断] change 触发: files.length =', input.files?.length, ', file =', file?.name);
+  toastr.info(`诊断① change已触发 | files=${input.files?.length ?? 0} | file=${file?.name ?? '无'}`);
   if (!file) return;
   try {
     const text = await file.text();
+    console.info('[Choice][导入诊断] 读取成功, 长度 =', text.length);
+    toastr.info(`诊断② 读取成功 ${text.length} 字符`);
     const data = JSON.parse(text);
+    console.info('[Choice][导入诊断] 解析成功, type =', data?.type);
+    toastr.info(`诊断③ 解析成功 type=${data?.type ?? '无'}`);
     if (data?.type !== 'choice-pool-export') {
       toastr.error(t`文件格式不正确`);
       return;
     }
     importFileData.value = { ...data.data, fileName: file.name, exportedAt: data.exportedAt };
     showImportPool.value = true;
-  } catch {
-    toastr.error(t`文件解析失败`);
+    console.info('[Choice][导入诊断] 确认框已请求显示');
+    toastr.info('诊断④ 确认框应已弹出');
+  } catch (err) {
+    console.error('[Choice][导入诊断] 异常:', err);
+    toastr.error(`诊断异常: ${err instanceof Error ? err.message : String(err)}`);
   }
   (e.target as HTMLInputElement).value = '';
 };
