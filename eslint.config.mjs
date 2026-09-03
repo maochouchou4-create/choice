@@ -49,8 +49,20 @@ export default [
         ...globals.browser,
       },
     },
+    settings: {
+      // 与 tsconfig.typecheck.json 对齐：@sillytavern/* 在开发克隆里只有经它映射到
+      // ../TauriTavern/src 才能解析（主 tsconfig 的 paths 按酒馆内安装深度写死）
+      'import-x/resolver': {
+        typescript: {
+          project: 'tsconfig.typecheck.json',
+        },
+      },
+    },
     rules: {
       'handle-callback-err': 'off',
+      // 仓库内 v-html 只渲染自维护的静态指南 HTML（tab-definitions/各对话框内联文案），
+      // 无用户输入；若将来要渲染外部内容必须重新启用本规则
+      'vue/no-v-html': 'off',
       'import-x/no-console': 'off',
       'import-x/no-cycle': 'error',
       'import-x/no-dynamic-require': 'warn',

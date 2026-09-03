@@ -13,7 +13,7 @@
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
         }"
       >
-        <div class="choice-floating-header" ref="headerEl">
+        <div ref="headerEl" class="choice-floating-header">
           <span class="choice-floating-title">
             <i class="fa-solid fa-grip-vertical choice-grip-icon"></i>
             <i class="fa-solid fa-wand-magic-sparkles"></i>

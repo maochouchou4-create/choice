@@ -14,6 +14,7 @@
 ### 类型检查
 - 新增 `tsconfig.typecheck.json`：`@sillytavern/*` 类型映射指向 `../TauriTavern/src`（实际使用的酒馆分支源码），开发克隆内可跑 vue-tsc
 - 修复 `default-pool.ts` 失效的类型导入（`'./settings'`→`'@/type/settings'`，此前被 import type 编译期擦除掩盖）
+- eslint 存量清零（0 错误 0 警告）：import resolver 接入 typecheck 映射消 32 条 no-unresolved；修 FilterEditor 两处 lonely-if、generator 字符类内多余转义；共享组件补 prop 默认值；`vue/no-v-html` 全局关闭（仅渲染仓库内静态指南 HTML）
 
 ### 文档
 - AGENTS.md 同步新架构（提示词单源约束、类型检查说明、目录清单），清理已删功能的过时文案（输入润色、目录中不存在的文件）

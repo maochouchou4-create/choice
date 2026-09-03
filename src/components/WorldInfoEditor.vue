@@ -15,7 +15,7 @@
       <div class="choice-wi-section-title choice-wi-collapsible" @click="showGlobalExcl = !showGlobalExcl">
         <i class="fa-solid" :class="showGlobalExcl ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
         {{ t`全局排除` }}
-        <span class="choice-wi-count" v-if="globalExcludedBooks.length > 0">({{ globalExcludedBooks.length }})</span>
+        <span v-if="globalExcludedBooks.length > 0" class="choice-wi-count">({{ globalExcludedBooks.length }})</span>
       </div>
       <div v-if="showGlobalExcl" class="choice-wi-global-excl-body">
         <div v-if="globalExcludedBooks.length === 0" class="choice-empty-hint">
@@ -27,7 +27,7 @@
             <button class="choice-wi-enable-btn" @click.stop="removeGlobalExcl(name)">{{ t`移除` }}</button>
           </div>
         </div>
-        <select class="choice-wi-global-excl-select" v-model="selectedGlobalExcl" @change="addGlobalExcl">
+        <select v-model="selectedGlobalExcl" class="choice-wi-global-excl-select" @change="addGlobalExcl">
           <option value="">{{ t`-- 添加世界书到全局排除 --` }}</option>
           <option v-for="name in availableGlobalExclBooks" :key="name" :value="name">{{ name }}</option>
         </select>

@@ -110,7 +110,7 @@ pnpm build          # 一次性打包，验证构建是否通过
 npx vue-tsc --noEmit -p tsconfig.typecheck.json  # 类型检查，src/ 内必须 0 错误（类型债已清零，勿新增）
 ```
 
-类型检查说明：主 `tsconfig.json` 的 `@sillytavern/*` paths 按扩展安装在酒馆目录内的相对深度写死（上跳四级），开发克隆里解析不到；`tsconfig.typecheck.json` 把它映射到 `../TauriTavern/src`（用户实际使用的酒馆分支克隆，网页根在 `src/`）。看结果只看 `src/` 开头的行——`../TauriTavern/**` 内的报错是酒馆自身代码（Tauri 侧全局变量等），不归本仓库。eslint 的 `import-x/no-unresolved`（`@sillytavern/*`）同理是解析环境差异；`EntryPoolDialog.vue` 的 no-lonely-if、`generator.ts` 的 no-useless-escape 为存量错误，勿新增。
+类型检查说明：主 `tsconfig.json` 的 `@sillytavern/*` paths 按扩展安装在酒馆目录内的相对深度写死（上跳四级），开发克隆里解析不到；`tsconfig.typecheck.json` 把它映射到 `../TauriTavern/src`（用户实际使用的酒馆分支克隆，网页根在 `src/`）。看结果只看 `src/` 开头的行——`../TauriTavern/**` 内的报错是酒馆自身代码（Tauri 侧全局变量等），不归本仓库。eslint 的 import resolver 已指向同一映射；lint 验收基线＝**0 错误 0 警告**（2026-09-03 清零，勿回升）。
 
 **`pnpm watch` 由我在独立终端里全程跑着**，不需要agent自己调用——`watch`是常驻进程不会退出，agent的工具调用是"跑命令等结束"模式，扔给它一个不结束的命令会卡住。agent只需要用一次性的`pnpm build`（或`vue-tsc --noEmit`）自查有没有类型/编译错误。
 

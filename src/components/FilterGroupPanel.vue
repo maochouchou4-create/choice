@@ -161,7 +161,7 @@ const props = withDefaults(
     showBindings: boolean;
     bindingLabel: string;
     bindingIcon: string;
-    duplicateIndices: Set<number>;
+    duplicateIndices?: Set<number>;
   }>(),
   {
     duplicateIndices: () => new Set(),

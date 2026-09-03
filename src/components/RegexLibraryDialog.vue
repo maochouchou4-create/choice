@@ -36,7 +36,7 @@
           <div v-if="groupedEntries.length > 0" ref="groupListEl" class="choice-regexlib-list">
             <div v-for="group in groupedEntries" :key="group.key" class="choice-regexlib-group">
               <div class="choice-regexlib-group-head" @click="toggleGroup(group.key)">
-                <label class="choice-check" @click.stop v-if="selectable">
+                <label v-if="selectable" class="choice-check" @click.stop>
                   <input type="checkbox" :checked="isGroupAllSelected(group)" @change="toggleSelectGroup(group)" />
                 </label>
                 <i class="fa-solid" :class="expandedGroups.has(group.key) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -94,7 +94,7 @@
                   :data-entry-id="entry.id"
                 >
                   <i class="fa-solid fa-grip-vertical choice-regexlib-drag-handle" :title="t`拖动排序/换组`"></i>
-                  <label class="choice-check" v-if="selectable">
+                  <label v-if="selectable" class="choice-check">
                     <input type="checkbox" :checked="selectedIds.has(entry.id)" @change="toggleSelect(entry.id)" />
                   </label>
                   <select v-model="entry.type" class="text_pole" style="width: 90px; flex-shrink: 0">
