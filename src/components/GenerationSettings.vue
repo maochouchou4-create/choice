@@ -115,6 +115,27 @@
     <div class="choice-generation-section">
       <div class="choice-field">
         <div class="choice-field-label">
+          <label>{{ t`候选超发` }}</label>
+        </div>
+        <small class="choice-field-hint">{{ t`候选条目按选项数量的倍数抽取，由 AI 从中终选最贴合场景的` }}</small>
+      </div>
+      <div class="choice-count-row">
+        <label
+          class="choice-count-item"
+          :title="t`倍数越高越不容易抽不到合适条目，代价是消耗更多 token`"
+        >
+          <select v-model.number="gs.settings.candidate_multiplier" class="text_pole" style="width: auto">
+            <option :value="1">{{ t`关闭` }}</option>
+            <option :value="2">×2</option>
+            <option :value="3">×3</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="choice-generation-section">
+      <div class="choice-field">
+        <div class="choice-field-label">
           <label>{{ t`每条字数` }}</label>
         </div>
         <small class="choice-field-hint">{{ t`控制每条选项的字数区间（中文字符）` }}</small>

@@ -1,12 +1,5 @@
 import type { PoolEntry } from '@/type/settings';
 
-export type ResolvePoolInput = {
-  effectivePool: PoolEntry[];
-  count: number;
-  shuffleFinal: boolean;
-  pinnedOverflow: 'send_all' | 'trim';
-};
-
 export type ResolvePoolResult = {
   pinned: PoolEntry[];
   drawn: PoolEntry[];
@@ -23,50 +16,20 @@ const shuffled = <T>(list: T[]): T[] => {
   return copy;
 };
 
-const safeWeight = (entry: PoolEntry): number => {
-  const w = entry.weight;
-  return typeof w === 'number' && Number.isFinite(w) && w >= 0 ? w : 1;
-};
-
-const weightedPick = (entries: PoolEntry[], amount: number): PoolEntry[] => {
-  return shuffled(entries)
-    .map(entry => ({ entry, key: Math.pow(Math.random(), 1 / Math.max(safeWeight(entry), 0.0001)) }))
-    .sort((a, b) => b.key - a.key)
-    .slice(0, amount)
-    .map(item => item.entry);
-};
-
-export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
-  const pinned = input.effectivePool.filter(entry => entry.pinned);
-  const pool = input.effectivePool.filter(entry => !entry.pinned);
-
-  let pinnedUsed = pinned;
-  let remaining = 0;
-  if (pinnedUsed.length > input.count) {
-    if (input.pinnedOverflow === 'trim') {
-      // 随机截断：先打乱再取前 count 条，避免总是截掉末尾的条目
-      pinnedUsed = shuffled(pinnedUsed).slice(0, input.count);
-      remaining = 0;
-    } else {
-      remaining = 0;
-    }
-  } else {
-    remaining = Math.max(input.count - pinnedUsed.length, 0);
-  }
-
-  // 分组轮抽已删（用户拍板：会抽到不适合的分组）——统一走全局加权抽取，
-  // 场景适配交给候选超发 + 生成 AI 终选
-  const drawn = weightedPick(pool, remaining);
-
-  let selected = [...pinnedUsed, ...drawn];
-  if (input.shuffleFinal) {
-    selected = shuffled(selected);
-  }
-
+/** 条目抽取：均匀随机无放回抽样。
+ *  历史上的 weight 加权、分组轮抽、打乱/溢出开关均已删（用户声明永不通过 UI 改条目参数，
+ *  全部退化为固定行为）：固定条目全部保留不截断；不足目标数时有多少抽多少；结果整体打乱
+ *  （避免固定条目总在开头造成 AI 顺序偏好）。场景适配由候选超发 + 生成 AI 终选负责。 */
+export function resolvePool(input: { entries: PoolEntry[]; count: number }): ResolvePoolResult {
+  const pinned = input.entries.filter(entry => entry.pinned);
+  const rest = input.entries.filter(entry => !entry.pinned);
+  const remaining = Math.max(input.count - pinned.length, 0);
+  const drawn = shuffled(rest).slice(0, remaining);
+  const selected = shuffled([...pinned, ...drawn]);
   return {
     // 打乱最终结果时也打乱 pinned 和 drawn，确保发给 AI 的提示词顺序随机
-    pinned: input.shuffleFinal ? shuffled(pinnedUsed) : pinnedUsed,
-    drawn: input.shuffleFinal ? shuffled(drawn) : drawn,
+    pinned: shuffled(pinned),
+    drawn,
     selected,
     underflow: selected.length < input.count,
   };

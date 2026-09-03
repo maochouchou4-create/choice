@@ -55,8 +55,7 @@
             <div v-html="currentGuide.html"></div>
           </GuidePopover>
 
-          <PoolEditor v-if="activeTab === 'pool'" />
-          <GenerationSettings v-else-if="activeTab === 'generation'" />
+          <GenerationSettings v-if="activeTab === 'generation'" />
           <ApiEditor v-else-if="activeTab === 'api'" />
           <WorldInfoEditor v-else-if="activeTab === 'worldinfo'" />
           <FilterEditor v-else-if="activeTab === 'filter'" />
@@ -75,14 +74,13 @@
 import ApiEditor from '@/components/ApiEditor.vue';
 import AppearanceSettings from '@/components/AppearanceSettings.vue';
 import GenerationSettings from '@/components/GenerationSettings.vue';
-import PoolEditor from '@/components/PoolEditor.vue';
 import FilterEditor from '@/components/FilterEditor.vue';
 import WorldInfoEditor from '@/components/WorldInfoEditor.vue';
 import GuidePopover from '@/components/GuidePopover.vue';
 import { FLOATING_TABS, GUIDE_CONTENTS, type TabId } from '@/components/shared/tab-definitions';
 import { isSettingsOpen, closeSettings } from '@/core/floating-state';
 
-const activeTab = ref<TabId>('pool');
+const activeTab = ref<TabId>('generation');
 const showGuide = ref(false);
 const guideBtn = ref<HTMLElement | null>(null);
 

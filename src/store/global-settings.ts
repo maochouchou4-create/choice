@@ -1,5 +1,5 @@
-import { chat_metadata, saveCharacterDebounced, saveSettingsDebounced, this_chid } from '@sillytavern/script';
-import { extension_settings, saveMetadataDebounced } from '@sillytavern/scripts/extensions';
+import { chat_metadata, saveSettingsDebounced, this_chid } from '@sillytavern/script';
+import { extension_settings } from '@sillytavern/scripts/extensions';
 import { eventSource, event_types } from '@sillytavern/scripts/events';
 import { uuidv4 } from '@sillytavern/scripts/utils';
 import {
@@ -10,289 +10,47 @@ import {
 // 不能依赖 unplugin-auto-import——它只覆盖 vue/pinia/@vueuse/zod 等预设，
 // 本仓库自有模块漏导入时构建不报错（rollup 视为全局引用），直到运行时才 ReferenceError
 import { detectSTTheme, getSTInkFallback, watchSTTheme } from '@/core/theme-detector';
-import { getStCharacter } from '@/core/st-character';
-import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
-
-/** 出厂默认条目池：13 组 52 条（详见 src/core/default-pool.ts 的设计注释）。
- *  恢复默认 / 全新档案共用此单一事实源。 */
-function buildDefaultEntries(): PoolEntry[] {
-  return DEFAULT_MASTER_POOL.map(e => ({ ...e }));
-}
-
 import type {
   GlobalSettings as GlobalSettingsType,
-  PoolConfig,
-  PoolConfigEntry,
-  PoolEntry,
   FilterGroup,
   RegexLibraryEntry,
   FilterGroupEntry,
 } from '@/type/settings';
 import { validateInplace } from '@/util/zod';
 
-const applyDefaults = (validated: GlobalSettingsType) => {
-  if ((validated.schema_version ?? 0) < 9) {
-    // 旧三层池数据迁移：收集 → 去重 → 合并为 master_pool + 自动配置
-    const oldGlobalPool: PoolEntry[] = (_.get(extension_settings, [setting_field, 'pool']) as PoolEntry[]) ?? [];
-    const oldGlobalGen = _.get(extension_settings, [setting_field, 'generation']);
-    let charName = '';
-    let oldCharPool: PoolEntry[] = [];
-    try {
-      const ch = getStCharacter(this_chid);
-      if (ch) {
-        charName = ch.name || '';
-        oldCharPool = (_.get(ch, ['data', 'extensions', setting_field, 'pool']) as PoolEntry[]) ?? [];
-      }
-    } catch {
-      // 角色数据不可用时跳过
-    }
-    let oldChatPool: PoolEntry[] = [];
-    try {
-      const cMeta = chat_metadata?.[setting_field];
-      if (cMeta) {
-        oldChatPool = (cMeta.pool as PoolEntry[]) ?? [];
-      }
-    } catch {
-      // 聊天元数据不可用时跳过迁移，使用默认值
-    }
-
-    // 按 type 去重合并：相同 type 只保留第一条（优先级：聊天 > 角色 > 全局）
-    const seen = new Map<string, PoolEntry>();
-    for (const e of oldChatPool) {
-      if (!seen.has(e.type)) seen.set(e.type, e);
-    }
-    for (const e of oldCharPool) {
-      if (!seen.has(e.type)) seen.set(e.type, e);
-    }
-    for (const e of oldGlobalPool) {
-      if (!seen.has(e.type)) seen.set(e.type, e);
-    }
-    validated.master_pool = [...seen.values()];
-
-    const configs: PoolConfig[] = [];
-    const makeEntries = (pool: PoolEntry[]): PoolConfigEntry[] =>
-      pool.map(e => ({ entry_id: e.id, pinned: e.pinned, weight: e.weight, condition: e.condition }));
-
-    if (oldGlobalPool.length > 0) {
-      configs.push({
-        id: uuidv4(),
-        name: '全局默认',
-        entries: makeEntries(oldGlobalPool),
-        is_default: true,
-        generation: (oldGlobalGen as any) ?? {
-          count_mode: '4',
-          shuffle_final: true,
-          pinned_overflow: 'send_all',
-          candidate_multiplier: 2,
-        },
-      });
-    }
-
-    if (oldCharPool.length > 0) {
-      const charConfigId = uuidv4();
-      configs.push({
-        id: charConfigId,
-        name: charName ? `角色 ${charName}` : '角色默认',
-        entries: makeEntries(oldCharPool),
-        is_default: configs.length === 0,
-        generation: {
-          count_mode: '4',
-          shuffle_final: true,
-          pinned_overflow: 'send_all',
-          candidate_multiplier: 2,
-        },
-      });
-      try {
-        const ch = getStCharacter(this_chid);
-        if (ch) {
-          _.set(ch, ['data', 'extensions', setting_field], charConfigId);
-          // 旧 pool 字段被 config 体系取代，删除残留；extensions 可能在异常卡上缺失
-          delete ch.data?.extensions?.[setting_field]?.pool;
-          saveCharacterDebounced();
-        }
-      } catch {
-        // 角色绑定失败时静默跳过
-      }
-    }
-
-    if (oldChatPool.length > 0) {
-      const chatConfigId = uuidv4();
-      configs.push({
-        id: chatConfigId,
-        name: '聊天默认',
-        entries: makeEntries(oldChatPool),
-        is_default: configs.length === 0,
-        generation: {
-          count_mode: '4',
-          shuffle_final: true,
-          pinned_overflow: 'send_all',
-          candidate_multiplier: 2,
-        },
-      });
-      try {
-        const cMeta = chat_metadata?.[setting_field];
-        if (cMeta) {
-          cMeta.config_id = chatConfigId;
-          delete cMeta.pool;
-          saveMetadataDebounced();
-        }
-      } catch {
-        // 聊天绑定失败时静默跳过
-      }
-    }
-
-    // 如果没有任何配置，创建默认配置（含 4 条预设条目）
-    if (configs.length === 0) {
-      const defaultEntries = buildDefaultEntries();
-      validated.master_pool = [...defaultEntries];
-      configs.push({
-        id: uuidv4(),
-        name: '默认配置',
-        entries: defaultEntries.map(e => ({
-          entry_id: e.id,
-          pinned: e.pinned,
-          weight: e.weight,
-          condition: e.condition,
-        })),
-        is_default: true,
-        generation: {
-          count_mode: '4',
-          shuffle_final: true,
-          pinned_overflow: 'send_all',
-          candidate_multiplier: 2,
-        },
-      });
-    }
-
-    validated.configs = configs;
-
-    // 清理旧字段
-    delete (validated as any).pool;
-    delete (validated as any).generation;
-  }
-
-  if ((validated.schema_version ?? 0) < 8) {
-    try {
-      const chatWI = chat_metadata?.[setting_field]?.world_info;
-      if (chatWI && chatWI.enabled !== undefined) {
-        validated.world_info = {
-          ...validated.world_info,
-          enabled: chatWI.enabled ?? true,
-        };
-      }
-    } catch {
-      // chat_metadata 不可用时跳过迁移，使用默认值
-    }
-  }
-
-  if ((validated.schema_version ?? 0) < 10) {
-    // 移除 pinned_follows_condition（条件改为 AI 判断）
-    for (const cfg of validated.configs) {
-      delete (cfg.generation as any).pinned_follows_condition;
-    }
-    // 填充 group_order：从现有条目的 category 去重后按字母排序
-    if (!validated.group_order || validated.group_order.length === 0) {
-      const cats = new Set<string>();
-      for (const e of validated.master_pool) {
-        if (e.category.trim()) cats.add(e.category.trim());
-      }
-      validated.group_order = [...cats].sort();
-    }
-  }
-
-  if ((validated.schema_version ?? 0) < 13) {
-    // v13: 对已迁移但池为空的用户，补建默认条目和配置
-    if (validated.master_pool.length === 0 && validated.configs.length === 0) {
-      const defaultEntries = buildDefaultEntries();
-      validated.master_pool = [...defaultEntries];
-      validated.configs = [
-        {
-          id: uuidv4(),
-          name: '默认配置',
-          entries: defaultEntries.map(e => ({
-            entry_id: e.id,
-            pinned: e.pinned,
-            weight: e.weight,
-            condition: e.condition,
-          })),
-          is_default: true,
-          generation: {
-            count_mode: '4',
-            shuffle_final: true,
-            pinned_overflow: 'send_all',
-            candidate_multiplier: 2,
-          },
-        },
-      ];
-    }
-  }
-
-  // v18: 旧 theme 字段迁移到 theme_mode
-  if ((validated.schema_version ?? 0) < 18) {
-    const oldTheme = (validated.ui as any).theme;
-    if (oldTheme && (validated.ui as any).theme_mode === undefined) {
-      (validated.ui as any).theme_mode = oldTheme;
-    }
-  }
-
-  validated.schema_version = SCHEMA_VERSION;
-};
-
 export const useGlobalSettingsStore = defineStore('global-settings', () => {
   // 迁移逻辑处理的是未经 Zod 验证的旧存档，字段形态不可知，显式 any；
   // 且 extension_settings 的类型声明不含 choice 命名空间键，_.get 会推断成 undefined/never
   const existing = _.get(extension_settings, setting_field) as any;
 
-  // 旧 entry_ids → entries 格式转换：必须在 Zod 验证之前执行，
-  // 否则 Zod 会因 entries 为 undefined 而报错
-  const rawConfigs: any[] = _.get(existing, 'configs', []) ?? [];
-  const needsConversion = rawConfigs.some((c: any) => c.entry_ids !== undefined || c.entries === undefined);
-  if (needsConversion && rawConfigs.length > 0) {
-    const masterPool: PoolEntry[] = (_.get(existing, 'master_pool') as PoolEntry[]) ?? [];
-    const masterMap = new Map(masterPool.map(e => [e.id, e]));
-    for (const cfg of rawConfigs) {
-      // 如果存在旧格式 entry_ids，转换为 entries
-      if (Array.isArray(cfg.entry_ids)) {
-        cfg.entries = cfg.entry_ids.map((id: string) => {
-          const src = masterMap.get(id);
-          return {
-            entry_id: id,
-            pinned: src?.pinned ?? false,
-            weight: src?.weight ?? 1,
-            condition: src?.condition ?? '',
-          };
-        });
-        delete cfg.entry_ids;
-      }
-      // 兜底：确保 entries 始终是数组
-      if (!Array.isArray(cfg.entries)) {
-        cfg.entries = [];
-      }
-    }
-    _.set(extension_settings, [setting_field, 'configs'], rawConfigs);
-    saveSettingsDebounced();
-  }
-
-  // v14 迁移（必须在 Zod 验证前执行，因为 schema 已将 text 改为 type）
-  const rawPool = _.get(existing, 'master_pool');
-  if (Array.isArray(rawPool) && rawPool.length > 0 && rawPool[0].text !== undefined) {
-    for (const e of rawPool) {
-      e.type = e.text ?? '';
-      e.content = '';
-      e.rule = '';
-      delete e.text;
-    }
-  }
-
-  // 注意：曾有一个 v14 迁移块把 chat_filter_groups.character_id 从字符串转 number，
-  // 方向与现行 schema（z.preprocess(String) 归一化为字符串）相反，已删除——
-  // schema 的 preprocess 已兼容旧数字/旧字符串存档，保留该块只会误导后人。
-
   const validated = validateInplace(GlobalSettings, existing);
 
   const needsMigration = (validated.schema_version ?? 0) < SCHEMA_VERSION;
   if (needsMigration) {
-    applyDefaults(validated);
+    // 历史上的旧三层池迁移/提示词模块迁移已随对应存档字段删除而整体移除；
+    // 剩余迁移仅 v8 世界书搬运与 v18 主题字段，v20 起池存储已不存在
+    if ((validated.schema_version ?? 0) < 8) {
+      try {
+        const chatWI = chat_metadata?.[setting_field]?.world_info;
+        if (chatWI && chatWI.enabled !== undefined) {
+          validated.world_info = {
+            ...validated.world_info,
+            enabled: chatWI.enabled ?? true,
+          };
+        }
+      } catch {
+        // chat_metadata 不可用时跳过迁移，使用默认值
+      }
+    }
+
+    if ((validated.schema_version ?? 0) < 18) {
+      const oldTheme = (validated.ui as any).theme;
+      if (oldTheme && (validated.ui as any).theme_mode === undefined) {
+        (validated.ui as any).theme_mode = oldTheme;
+      }
+    }
+
+    validated.schema_version = SCHEMA_VERSION;
     _.set(extension_settings, setting_field, klona(validated));
     saveSettingsDebounced();
   }
@@ -471,28 +229,6 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
     fresh.filter_settings.regex_library = [];
     fresh.filter_settings.groups = [];
     fresh.filter_settings.library_groups = [];
-
-    const defaultEntries = buildDefaultEntries();
-    fresh.master_pool = [...defaultEntries];
-    fresh.configs = [
-      {
-        id: uuidv4(),
-        name: '默认配置',
-        entries: defaultEntries.map(e => ({
-          entry_id: e.id,
-          pinned: e.pinned,
-          weight: e.weight,
-          condition: e.condition,
-        })),
-        is_default: true,
-        generation: {
-          count_mode: '4',
-          shuffle_final: true,
-          pinned_overflow: 'send_all',
-          candidate_multiplier: 2,
-        },
-      },
-    ];
 
     settings.value = fresh;
   }

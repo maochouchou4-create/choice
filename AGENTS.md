@@ -22,19 +22,13 @@ SillyTavern 第三方扩展，基于 `tavern_extension_template` 二次开发。
   - `user`（或`prompt`）＝ 抽中的固定/随机条目素材 + 按轮数截取的上下文
   - 可选 `assistant`（`prefill`）＝ 预填输出格式起手式（比如强制"- "开头）
   - 优先用 `TavernHelper` 的 `generate`/`generateRaw`（`RolePrompt[]` / `overrides` / `injects`），或酒馆原生 `generateRaw({systemPrompt, prompt, prefill})`；不允许自己拼一整段字符串再整体当prompt参数传。
-- **条目池是 master_pool + PoolConfig 两层结构，不是三层覆盖**：
-  - **内容层**：`master_pool`（`PoolEntry[]`，全局 settings 唯一条目来源）— 条目内容（`id/type/content/rule/category`）只存在于 master_pool。
-  - **配置层**：多个 `PoolConfig`（`configs[]`），每个 config 决定"用哪些条目 + per-entry 覆盖 `pinned/weight/condition`"。
-  - **config 选择是覆盖式**：`chat.config_id > character.config_id > default`，命中即用该 config，不要把多个 config 的 entries 合并。
-  - **条目内容是合并式**：`effectivePool` = master_pool 中被选中 config 引用的条目，叠加 config 的 `pinned/weight/condition` 覆盖项。`content/type/rule/category` 只读 master_pool，config 不持有这些字段——不要从 config 读 content，会丢字段。
-  - **常见 footgun**：① 把多个 config 的 entries 合并；② 从 config 而非 master_pool 读条目内容；③ 忘记 master_pool 是内容唯一真相源。
+- **条目池无 UI、无存档（与提示词同款单源架构）**：唯一来源是 `src/core/default-pool.ts`（`DEFAULT_MASTER_POOL`），改条目＝改该文件→build→推 fork。抽取＝均匀随机无放回（weight 加权、分组轮抽、PoolConfig 配置体系、聊天/角色绑定均已删——用户声明永不通过 UI 改内容，插件只留开关）；固定条目（pinned）全发不截断；场景适配＝候选超发（全局 `candidate_multiplier`，生成 tab 可调）+ AI 终选 + `[条件]` 标记。勿复活存档式条目池或配置绑定。
 - **楼层持久化挂在消息对象上**：生成结果存进对应AI消息的 `message.extra['asyncActionOptions']`，按 `swipe_id` 再分一层（类似swipe机制），保证切楼层/切swipe时选项历史不串。同楼层多次生成走 `generations[]` + `currentIndex` 翻页，不跨楼层保留。
-- **聊天生成支持两种模式**：聊天内模式（与角色卡绑定，读取世界书和聊天记录）和全局模式（全局持久化，不读取世界书和聊天记录）。用户可手动切换。
 - **提示词模块无 UI、无存档**：唯一来源是根目录 `default-prompt-modules.json`，运行时按模块 role/order 组装（`generator.ts` 的 `sub()` 替换 `{{count}}`/`{{min_chars}}` 等模板变量，`{{user}}` 走 ST `substituteParams`）。改提示词正文 = 改该 JSON；`prompt_rules` 存档字段只剩运行时开关（上下文模式/轮数、预填充、选项人称/字数），不要往存档里加提示词正文字段。
 
 ## UI 设计系统与约定
 
-当前 UI 正在做系统性翻新（原因：`theme.css` 只有颜色 token，没有间距/字号体系，各组件各写各的 padding；`EntryPoolDialog.vue`/`PoolEditor.vue` 这类信息密集页面一行塞多个控件、头部堆多个纯图标按钮，是"混乱"感的主要来源）。以下是已确认的方向，改 UI 相关代码前先看这节，避免和已定方案冲突。
+当前 UI 正在做系统性翻新（原因：`theme.css` 只有颜色 token，没有间距/字号体系，各组件各写各的 padding；历史上 `EntryPoolDialog.vue`/`PoolEditor.vue` 这类信息密集页面一行塞多个控件、头部堆多个纯图标按钮，是"混乱"感的主要来源——这些页面已随条目池单源化删除，教训仍然适用）。以下是已确认的方向，改 UI 相关代码前先看这节，避免和已定方案冲突。
 
 ### 设计原则
 - 不换主色调（`--choice-primary` 蓝色系已验证可用，`ActionOptionsPanel.vue` 是现有代码里视觉完成度最高的部分，只做细节打磨，不大改）。
@@ -52,9 +46,9 @@ SillyTavern 第三方扩展，基于 `tavern_extension_template` 二次开发。
 ### 共享基础组件（`src/components/shared/`，现有）
 `shared/` 包含设计系统基础组件，**新写的 UI 一律基于它们，不允许再裸写卡片/弹窗结构**：
 - `ChoiceSection.vue` — 分段容器，带标题+可选折叠。
-- `ChoiceCard.vue` — 列表行卡片，摘要行与操作/详情行分离（不像 `EntryPoolDialog.vue` 现在那样一行塞 6 个控件），slots：`#summary` `#badges` `#actions` `#details`。
+- `ChoiceCard.vue` — 列表行卡片，摘要行与操作/详情行分离，slots：`#summary` `#badges` `#actions` `#details`。
 - `ChoiceField.vue` — 表单字段行，统一 label+input 间距对齐；窄容器下 row→stack 自动切换（见下方"响应式布局"，不用 CSS container query）。
-- `ChoiceDialog.vue` — 弹窗外壳，统一 `ConfirmDialog`/`CreateConfigDialog`/`SelectEntriesDialog`/`ImportPoolDialog`/`PoolGenDialog`/`EntryPoolDialog`/`FloatingSettings` 这些现在各自实现一遍 overlay/header/footer 的弹窗。
+- `ChoiceDialog.vue` — 弹窗外壳，统一 `ConfirmDialog`/`RegexLibraryDialog`/`StRegexImportDialog`/`FloatingSettings` 这些现在各自实现一遍 overlay/header/footer 的弹窗。
 - `useCompactLayout.ts` — 响应式布局 composable（基于 `useElementSize`，`COMPACT_BREAKPOINT = 420`）。
 
 迁移完成的验收标准：上述弹窗组件各自文件里不应再出现独立的 overlay/header scoped CSS。
@@ -80,7 +74,7 @@ export function useCompactLayout(target: Ref<HTMLElement | null>) {
 - **Idle**：贴边半隐藏，极慢速呼吸光晕（8s 周期，与 generating 的 3s 脉冲区分开，两套独立 keyframes）。
 - **Generating**：`generatorState.loading === true`，沿用现有脉冲动画。
 - **有新结果待查看**（新增状态）：`computed hasUnseenResult` = 最近一次 generation 完成时间戳 > 用户上次打开悬浮面板/点击气泡的时间戳。徽章弹入动效（`scale(0)→scale(1)`，`cubic-bezier(0.34, 1.56, 0.64, 1)`）。
-- **Disabled**：判断标准直接复用 `generator.ts` 里已有的校验，不新写逻辑——`resolveCustomApi(gs.settings.active_api_id, gs.settings.apis)` 解析不到（对应现有报错"请先在设置中配置 API"），**或** `usePoolSelectorStore().effectivePool` 为空数组，两者任一为真即 Disabled。
+- **Disabled**：判断标准直接复用 `generator.ts` 里已有的校验，不新写逻辑——`resolveCustomApi(gs.settings.active_api_id, gs.settings.apis)` 解析不到（对应现有报错"请先在设置中配置 API"）。条目池已代码单源（`DEFAULT_MASTER_POOL` 非空恒成立），仅 API 未配置即 Disabled。
 
 交互：
 - 点击：有未读结果时优先展开"最近一次生成结果的快速预览"popover；无未读结果时行为不变（打开设置）。
@@ -91,15 +85,15 @@ export function useCompactLayout(target: Ref<HTMLElement | null>) {
 
 ## 目录（按实际文件结构，注意与早期规划稿的差异）
 
-- `src/core/` — `generator.ts`（单独调用API生成选项/条目池，结构化role prompt，支持取消，含 `resolveCustomApi` API 校验）、`pool-resolver.ts`（条件过滤+分组加权抽取，纯函数，接收已解析的 effectivePool）、`options-store.ts`（`message.extra`存取，含swipe维度、翻页）、`default-pool.ts`（出厂默认条目池单一事实源）、`floating-state.ts`（悬浮球/悬浮面板共享状态）、`api-client.ts`（API 请求封装）、`panel-mount.ts`（面板挂载逻辑）、`st-character.ts`/`st-regex-source.ts`（酒馆角色卡/正则脚本读取隔离层）、`theme-detector.ts`（主题检测）、`wand-menu.ts`（魔杖菜单集成）。
-- `src/store/` — `global-settings.ts`（对应`extension_settings`）、`character-settings.ts`（对应角色卡`data.extensions`）、`chat-settings.ts`（对应`chat_metadata`）、`pool-selector.ts`（组合三个store，解析 master_pool + config 覆盖后的 `effectivePool`/`effectiveConfig`）、`panel-state.ts`（面板展开/折叠、当前楼层/swipe追踪）。
-- `src/components/` — 主形态 `ActionOptionsPanel.vue`；悬浮形态 `FloatingBubble.vue` + `FloatingRoot.vue` + `FloatingSettings.vue` + `FloatingContextMenu.vue`；设置区 `SettingsPanel.vue` + 5 个 tab 组件（`PoolEditor.vue`/`GenerationSettings.vue`/`ApiEditor.vue`/`WorldInfoEditor.vue`/`AppearanceSettings.vue`，恢复出厂设置在外观页）；条目池管理 `EntryPoolDialog.vue`/`PoolGenDialog.vue`/`SelectEntriesDialog.vue`/`FilterEditor.vue`/`FilterGroupPanel.vue`/`StRegexImportDialog.vue`；通用 `ConfirmDialog.vue`/`CreateConfigDialog.vue`/`GuidePopover.vue`/`RegexLibraryDialog.vue`；`shared/`（设计系统基础组件，见上节）。
+- `src/core/` — `generator.ts`（单独调用API生成选项，结构化role prompt，支持取消，含 `resolveCustomApi` API 校验）、`pool-resolver.ts`（均匀随机无放回抽样，纯函数）、`options-store.ts`（`message.extra`存取，含swipe维度、翻页）、`default-pool.ts`（条目池唯一事实源）、`floating-state.ts`（悬浮球/悬浮面板共享状态）、`api-client.ts`（API 请求封装）、`panel-mount.ts`（面板挂载逻辑）、`st-character.ts`/`st-regex-source.ts`（酒馆角色卡/正则脚本读取隔离层）、`theme-detector.ts`（主题检测）、`wand-menu.ts`（魔杖菜单集成）。
+- `src/store/` — `global-settings.ts`（对应`extension_settings`）、`chat-settings.ts`（对应`chat_metadata`，仅世界书排除项）、`panel-state.ts`（面板展开/折叠、当前楼层/swipe追踪）。
+- `src/components/` — 主形态 `ActionOptionsPanel.vue`；悬浮形态 `FloatingBubble.vue` + `FloatingRoot.vue` + `FloatingSettings.vue` + `FloatingContextMenu.vue`；设置区 `SettingsPanel.vue` + 5 个 tab 组件（`GenerationSettings.vue`/`ApiEditor.vue`/`WorldInfoEditor.vue`/`FilterEditor.vue`（过滤 tab 内嵌分组面板）/`AppearanceSettings.vue`，恢复出厂设置在外观页）；过滤对话框 `RegexLibraryDialog.vue`/`StRegexImportDialog.vue`/`FilterGroupPanel.vue`；通用 `ConfirmDialog.vue`/`GuidePopover.vue`；`shared/`（设计系统基础组件，见上节）。
 - `docs/` — 技术方案文档（`async-action-options-spec.md`）与早期MVP原型，作为背景参考，不是当前实现标准；UI 重构方案见另外维护的 `choice-ui-redesign-spec.md`（主体页面）与 `choice-floating-bubble-design.md`（悬浮球专项），本文件是二者的执行摘要，细节推理以那两份为准。
 
 ## 条目池模型 & 抽取算法要点
 
 - 条目字段（`PoolEntry`）：`id`、`type`、`content`、`rule`、`pinned`、`weight`、`category`、`condition`（表达式格式如`变量名 运算符 值`，例：`地点 == 医院`）。其中 `pinned`/`weight`/`condition` 可被 `PoolConfigEntry` 覆盖。
-- 抽取顺序（pool-resolver.ts）：解析 effectivePool（config 选择 + 条目合并）→ 拆分固定/非固定，处理溢出（默认固定条目不砍，全发）→ 全局加权无放回抽取（Efraimidis-Spirakis：`key = random()^(1/weight)`，降序取）→ 送入 prompt 前整体 shuffle 一次。**分组轮抽已删**（用户拍板：会抽到不适合的分组）——category 仅作组织标签，不参与抽取逻辑；场景适配由候选超发（`candidate_multiplier`）+ 生成 AI 终选负责，`[条件: xxx]` 标记交 AI 判断可用性。
+- 抽取顺序（pool-resolver.ts）：固定/非固定拆分 → 固定条目全部保留（不截断）→ 非固定均匀随机无放回抽样（打乱取前 N）→ 整体打乱。weight 加权与分组轮抽均已删（用户拍板）；场景适配由候选超发（全局 `candidate_multiplier`）+ 生成 AI 终选负责，`[条件: xxx]` 标记交 AI 判断可用性。
 - 详细算法与各开关的默认值见 `docs/async-action-options-spec.md` 第3节。
 
 ## 构建与验证

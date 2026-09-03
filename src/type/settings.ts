@@ -12,7 +12,6 @@ export const PoolEntry = z
     content: z.string().default(''),
     rule: z.string().default(''),
     pinned: z.boolean().default(false),
-    weight: z.number().min(0).default(1),
     category: z.string().default(''),
     condition: z.string().default(''),
   })
@@ -20,54 +19,6 @@ export const PoolEntry = z
   // 空对象不满足签名；占位值仅在输入为 undefined 的极端路径触发，正常条目不受影响
   .prefault(() => ({ id: '', type: '' }));
 export type PoolEntry = z.infer<typeof PoolEntry>;
-
-export const GenerationSettings = z
-  .object({
-    count_mode: z.string().default('4'),
-    shuffle_final: z.boolean().default(true),
-    pinned_overflow: z.enum(['send_all', 'trim']).default('send_all'),
-    // 候选超发倍数：抽签数 = 目标条数 × 倍数，超发候选由生成 AI 终选，过滤不合场景的条目
-    candidate_multiplier: z.number().int().min(1).max(3).default(2),
-  })
-  .prefault({});
-export type GenerationSettings = z.infer<typeof GenerationSettings>;
-
-/** AI 条目生成聊天会话：多轮对话记录，聊天内模式存角色卡，全局模式存扩展设置 */
-export const PoolGenMessage = z.object({
-  role: z.enum(['user', 'assistant']),
-  content: z.string(),
-});
-export type PoolGenMessage = z.infer<typeof PoolGenMessage>;
-
-export const PoolGenSession = z.object({
-  id: z.string(),
-  name: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
-  messages: z.array(PoolGenMessage).default([]),
-});
-export type PoolGenSession = z.infer<typeof PoolGenSession>;
-
-export const PoolConfigEntry = z
-  .object({
-    entry_id: z.string(),
-    pinned: z.boolean().default(false),
-    weight: z.number().min(0).default(1),
-    condition: z.string().default(''),
-  })
-  .prefault(() => ({ entry_id: '' }));
-export type PoolConfigEntry = z.infer<typeof PoolConfigEntry>;
-
-export const PoolConfig = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    entries: z.array(PoolConfigEntry),
-    is_default: z.boolean().default(false),
-    generation: GenerationSettings.prefault({}),
-  })
-  .prefault(() => ({ id: '', name: '', entries: [] }));
-export type PoolConfig = z.infer<typeof PoolConfig>;
 
 export const PromptModule = z.object({
   id: z.string(),
@@ -176,7 +127,7 @@ export const SecondaryApi = z
   .prefault(() => ({ id: '', name: '', apiurl: '', key: '', model: '' }));
 export type SecondaryApi = z.infer<typeof SecondaryApi>;
 
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 
 export const WorldInfoGlobalSettings = z
   .object({
@@ -216,9 +167,8 @@ export type UISettings = z.infer<typeof UISettings>;
 export const GlobalSettings = z
   .object({
     schema_version: z.number().default(0),
-    master_pool: z.array(PoolEntry).prefault([]),
-    configs: z.array(PoolConfig).prefault([]),
-    group_order: z.array(z.string()).prefault([]),
+    /** 候选超发倍数：抽签数 = 目标条数 × 倍数，超发候选由生成 AI 终选，过滤不合场景的条目 */
+    candidate_multiplier: z.number().int().min(1).max(3).default(2),
     prompt_rules: PromptRules.prefault({}),
     // FilterSettings 全字段带 default，{} 作为输入 parse 即得全默认对象；
     // 不能用 .default({})：zod4 的 default 参数是输出类型，要求逐字段写全
@@ -229,7 +179,6 @@ export const GlobalSettings = z
     ui: UISettings.prefault({}),
     retry_count: z.number().min(0).max(10).default(0),
     global_count_mode: z.string().default('4'),
-    pool_gen_sessions: z.array(PoolGenSession).prefault([]),
     auto_generate: z.boolean().default(true),
     behavior: z.enum(['send', 'fill', 'append']).default('send'),
     empty_groups: z.array(z.string()).default([]),
@@ -237,17 +186,8 @@ export const GlobalSettings = z
   .prefault({});
 export type GlobalSettings = z.infer<typeof GlobalSettings>;
 
-export const CharacterSettings = z
-  .object({
-    config_id: z.string().nullable().default(null),
-    pool_gen_sessions: z.array(PoolGenSession).prefault([]),
-  })
-  .prefault({});
-export type CharacterSettings = z.infer<typeof CharacterSettings>;
-
 export const ChatSettings = z
   .object({
-    config_id: z.string().nullable().default(null),
     world_info: WorldInfoChatSettings.prefault({}),
   })
   .prefault({});

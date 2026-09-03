@@ -35,8 +35,8 @@
 
 <script setup lang="ts">
 import { generatorState, resolveCustomApi } from '@/core/generator';
+import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
 import { useGlobalSettingsStore } from '@/store/global-settings';
-import { usePoolSelectorStore } from '@/store/pool-selector';
 import { openSettings, isBubbleContextMenuOpen, bubbleX, bubbleY } from '@/core/floating-state';
 import FloatingContextMenu from '@/components/FloatingContextMenu.vue';
 
@@ -57,8 +57,7 @@ const isSnappedRight = ref(false);
 const isDisabled = computed(() => {
   const gs = useGlobalSettingsStore();
   const api = resolveCustomApi(gs.settings.active_api_id, gs.settings.apis);
-  const pool = usePoolSelectorStore().effectivePool;
-  return !api || pool.length === 0;
+  return !api || DEFAULT_MASTER_POOL.length === 0;
 });
 
 const bubbleState = computed(() => {
