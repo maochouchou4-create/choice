@@ -57,7 +57,6 @@
 
           <PoolEditor v-if="activeTab === 'pool'" />
           <GenerationSettings v-else-if="activeTab === 'generation'" />
-          <PromptEditor v-else-if="activeTab === 'prompt'" />
           <ApiEditor v-else-if="activeTab === 'api'" />
           <WorldInfoEditor v-else-if="activeTab === 'worldinfo'" />
           <FilterEditor v-else-if="activeTab === 'filter'" />
@@ -78,7 +77,6 @@ import ApiEditor from '@/components/ApiEditor.vue';
 import AppearanceSettings from '@/components/AppearanceSettings.vue';
 import GenerationSettings from '@/components/GenerationSettings.vue';
 import PoolEditor from '@/components/PoolEditor.vue';
-import PromptEditor from '@/components/PromptEditor.vue';
 import FilterEditor from '@/components/FilterEditor.vue';
 import WorldInfoEditor from '@/components/WorldInfoEditor.vue';
 import GuidePopover from '@/components/GuidePopover.vue';

@@ -1,4 +1,4 @@
-import defaultModulesJson from '../../choice-prompts-optimized.json';
+import defaultModulesJson from '../../default-prompt-modules.json';
 // 显式导入 z：auto-imports.d.ts 生成的全局 const z（typeof import('zod').z）在类型位置
 // 无法当命名空间用（z.infer 报 TS2503，且该文件被 gitignore 随时重生成），不能用
 import { z } from 'zod';
@@ -70,31 +70,6 @@ export const PoolConfig = z
   .prefault(() => ({ id: '', name: '', entries: [] }));
 export type PoolConfig = z.infer<typeof PoolConfig>;
 
-/** core_rules 模块中不受新手字段影响的静态部分（输出格式、内容要求、正误示例）。
- *  当 person_style 和 option_rules 都非空时，与它们动态拼接为完整的 core_rules 内容。 */
-export const CORE_RULES_STATIC = `【输出格式】
-必须在回复末尾将选项包裹在 <options> 标签内输出。每条选项独占一行，格式为 "[标题]内容"，标题用[]包裹。每个选项字数控制在 {{min_chars}}-{{max_chars}} 个中文字符。严禁在选项内容中使用[]符号。JSON 必须合法，不带尾随逗号，不包裹在代码块中。
-
-【内容要求】
-含言语的选项须包含『……』标注的可朗读对白。纯行动选项需包含与环境的物理交互细节。选项之间在切入点、行动类型、情绪态度上须有清晰差异，严禁同质化。所有选项只写行为过程、动机和期待，把最终反应权留给正文。
-
-【正误示例】
-错误：["[净界粉？我知道了。]走向石像基座..."]（标题非纯汉字）
-错误：["[『你为什么在这？』]{{user}}感到很疑惑。"]（对白当标题+越权裁定）
-错误：["[追问]{{user}}问他：『为什么？』他听后低下了头。"]（对话引导冒号+越权代演）
-正确：["[寻找铁罐]{{user}}向她微微点头，随后径直走向基座，蹲下身在积满灰尘的杂物中仔细翻找。", "[强势打断]『够了。』{{user}}毫不留情地打断了她的话，指尖不耐烦地轻叩着桌面。"]`;
-
-/** 新手字段默认值：叙述风格（人称/视角），自由文本 */
-export const DEFAULT_PERSON_STYLE = `选项内容以{{option_person}} {{user}} 为绝对主语，融入微表情、肢体语言、语气特征或感官体验，让 {{user}} 看起来是一个鲜活的参与者。例外：他人视角、与此同时、转场推进 三类不受绝对主语约束。鼓励在动作描写中加入与当前环境或道具的物理交互（如：靠在门框上、把玩手中的杯子），避免角色像在真空中对话。选项的切入点须紧扣正文末尾其他角色的当前状态。`;
-
-/** 新手字段默认值：6条核心选项生成规则 */
-export const DEFAULT_OPTION_RULES = `1. 独立与防越权：选项独立于正文，{{user}} 的行为不视为已发生；严禁预判或代演其他角色的反应（如"对方笑了""他松了口气"）。
-2. 直接引语：含言语交流的选项，必须以『……』给出完整可朗读的对白；纯动作/观察选项不强制。
-3. 输出纯净度：除 <thinking> 和 <options> 标签及其内容外，不输出任何文字。
-4. 条件过滤：可选条目中带 [条件: xxx] 标记的，仅在当前聊天上下文符合条件描述时使用；不符合则跳过。
-5. 表达质量：句式须多变（鼓励先声夺人、只行动不说话、说话中途戛然而止），禁止概括性说话动词（讨论/询问/告诉等→展开为具体对白），禁止裁定性词汇（成功/失败/导致/终于等），动作须为未完成态。
-6. 留白收尾：收尾可悬在半空、抛出反问、转身欲走，把反应权留给正文；允许简要说明行动内在动机。`;
-
 export const PromptModule = z.object({
   id: z.string(),
   name: z.string(),
@@ -104,51 +79,12 @@ export const PromptModule = z.object({
   system: z.boolean(),
   enabled: z.boolean().default(true),
   order: z.number().min(0),
-  option_only: z.boolean().default(false),
 });
 export type PromptModule = z.infer<typeof PromptModule>;
-
-export const PromptConfig = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    is_default: z.boolean().default(false),
-    modules: z.array(PromptModule).prefault([]),
-    person_style: z.string().default(''),
-    option_rules: z.string().default(''),
-    option_person: z.string().default('第三人称'),
-    option_min_chars: z.number().min(10).max(500).default(30),
-    option_max_chars: z.number().min(10).max(500).default(80),
-    context_rounds: z.number().min(0).default(10),
-    context_mode: z.enum(['rounds', 'visible_only']).default('visible_only'),
-    prefill_enabled: z.boolean().default(true),
-    baibai_enabled: z.boolean().default(false),
-  })
-  .prefault(() => ({ id: '', name: '' }));
-export type PromptConfig = z.infer<typeof PromptConfig>;
 
 // JSON 导入的 role 推断为 string，与 PromptModule 的字面量联合不兼容；内容受构建期 JSON 约束，
 // 此处断言安全（若 JSON 里 role 拼错，运行时由 zod 解析/生成流程兜底）
 export const DEFAULT_MODULES = defaultModulesJson.modules as unknown as PromptModule[];
-
-// 单一事实源：user_instruction 默认文本以 choice-prompts-optimized.json 为准派生，
-// 避免两处文本漂移（历史上这里曾手写短版，与 JSON 长版不一致）
-export const USER_INSTRUCTION_DEFAULT =
-  DEFAULT_MODULES.find(m => m.id === 'user_instruction')?.content ?? '';
-
-/** 「简洁」基准内容涉及的模块 id。默认提示词（choice-prompts-optimized.json）本身就是简洁版，
- *  这里只圈出 v19 迁移简化映射涉及的四个模块，供提取单一事实源。 */
-export const SIMPLE_MODULE_IDS = new Set(['core_rules', 'thinking_prompt']);
-
-/** 「简洁」基准内容（core_rules/thinking_prompt）。
- *  单一事实源：从 DEFAULT_MODULES 派生，v19 老存档迁移的简化映射复用它，
- *  避免 JSON 与迁移代码两处文本漂移——JSON 改了这里自动跟随。 */
-export const SIMPLE_MODULE_CONTENTS: Readonly<Record<string, string>> = Object.fromEntries(
-  DEFAULT_MODULES.filter(m => SIMPLE_MODULE_IDS.has(m.id)).map(m => [m.id, m.content]),
-);
-
-/** 柏宝书模块 ID 集合，供 PromptEditor 按总开关过滤显示 */
-export const BAIBAI_MODULE_IDS = new Set(['baibai_summary']);
 
 // 聊天记录过滤规则：标签匹配（字面量头/尾）或正则匹配，二者可混用
 export const ChatFilterRule = z.discriminatedUnion('type', [
@@ -166,21 +102,6 @@ export const ChatFilterRule = z.discriminatedUnion('type', [
   }),
 ]);
 export type ChatFilterRule = z.infer<typeof ChatFilterRule>;
-
-// 过滤规则分组：按用途（不同卡/预设的正则）组织规则，每组可独立启用/禁用
-export const ChatFilterGroup = z.object({
-  id: z.string(),
-  name: z.string(),
-  enabled: z.boolean().default(true),
-  rules: z.array(ChatFilterRule).default([]),
-  /** 绑定 ST 对话补全预设名，null = 全局 */
-  preset_name: z.string().nullable().default(null),
-  /** 绑定角色卡（this_chid），null = 全局。
-   *  归一化为字符串：酒馆 1.18 的 this_chid 实测是字符串（如 "2"），旧版本/旧存档可能是数字。
-   *  若声明为 number，运行时 addFilterGroup 写入字符串 → 重载时 Zod 抛错 → 整个插件启动失败 */
-  character_id: z.preprocess(v => (v == null ? null : String(v)), z.string().nullable().default(null)),
-});
-export type ChatFilterGroup = z.infer<typeof ChatFilterGroup>;
 
 export const RegexLibraryEntry = z.object({
   id: z.string(),
@@ -207,7 +128,8 @@ export const FilterGroup = z.object({
   enabled: z.boolean().default(true),
   entries: z.array(FilterGroupEntry).default([]),
   preset_name: z.string().nullable().default(null),
-  // 同 ChatFilterGroup：归一化为字符串，兼容旧数字存档与新版字符串 this_chid
+  // 归一化为字符串：酒馆 1.18 的 this_chid 实测是字符串（如 "2"），旧版本/旧存档可能是数字，
+  // === 比较会因类型不一致失配；声明为 number 则 addFilterGroup 写入字符串时 Zod 重载报错
   character_id: z.preprocess(v => (v == null ? null : String(v)), z.string().nullable().default(null)),
 });
 export type FilterGroup = z.infer<typeof FilterGroup>;
@@ -219,31 +141,22 @@ export const FilterSettings = z.object({
 });
 export type FilterSettings = z.infer<typeof FilterSettings>;
 
+/** 提示词模块的代码级参数：模块正文唯一来源是 default-prompt-modules.json（无 UI 编辑），
+ *  这里只存运行时可调的组装开关与选项约束。字段名 prompt_rules 沿用历史存档键，
+ *  改名会无谓丢掉用户已调好的值。 */
 export const PromptRules = z
   .object({
-    system_prompt: z.string().default(''),
-    core_rules: z.string().default(''),
     context_rounds: z.number().min(0).default(10),
-    /** @deprecated 已迁移到 chat_filter_groups，保留用于向后兼容 */
-    chat_filter_rules: z.array(ChatFilterRule).default([]),
-    chat_filter_groups: z.array(ChatFilterGroup).default([]),
-    modules: z.array(PromptModule).prefault([]),
-    prefill_enabled: z.boolean().default(true),
     /** 上下文模式：rounds = 取最后 N 轮（含隐藏消息）；visible_only = 仅未隐藏消息（不限轮数） */
     context_mode: z.enum(['rounds', 'visible_only']).default('visible_only'),
-    /** 柏宝书记忆源总开关：关闭时柏宝书模块在 PromptEditor 中隐藏且不注入 */
-    baibai_enabled: z.boolean().default(false),
-    /** 叙述风格（人称/视角），自由文本；非空时替换 core_rules 模块中的【叙述风格】段落 */
-    person_style: z.string().default(DEFAULT_PERSON_STYLE),
-    /** 核心选项生成规则，自由文本；非空时替换 core_rules 模块中的【核心规则】段落 */
-    option_rules: z.string().default(DEFAULT_OPTION_RULES),
-    /** 选项人称（简单值），显示在生成页面。person_style 非空时优先 */
+    /** 关闭后不发送 assistant 预填充消息，兼容不支持 prefill 的模型 */
+    prefill_enabled: z.boolean().default(true),
+    /** 选项人称（简单值），显示在生成页面 */
     option_person: z.string().default('第三人称'),
     /** 选项字数下限 */
     option_min_chars: z.number().min(10).max(500).default(30),
     /** 选项字数上限 */
     option_max_chars: z.number().min(10).max(500).default(80),
-    schema_version: z.number().default(0),
   })
   .prefault({});
 export type PromptRules = z.infer<typeof PromptRules>;
@@ -309,7 +222,6 @@ export const GlobalSettings = z
     configs: z.array(PoolConfig).prefault([]),
     group_order: z.array(z.string()).prefault([]),
     prompt_rules: PromptRules.prefault({}),
-    prompt_configs: z.array(PromptConfig).prefault([]),
     // FilterSettings 全字段带 default，{} 作为输入 parse 即得全默认对象；
     // 不能用 .default({})：zod4 的 default 参数是输出类型，要求逐字段写全
     filter_settings: FilterSettings.prefault({}),
@@ -330,7 +242,6 @@ export type GlobalSettings = z.infer<typeof GlobalSettings>;
 export const CharacterSettings = z
   .object({
     config_id: z.string().nullable().default(null),
-    prompt_config_id: z.string().nullable().default(null),
     pool_gen_sessions: z.array(PoolGenSession).prefault([]),
   })
   .prefault({});
@@ -339,7 +250,6 @@ export type CharacterSettings = z.infer<typeof CharacterSettings>;
 export const ChatSettings = z
   .object({
     config_id: z.string().nullable().default(null),
-    prompt_config_id: z.string().nullable().default(null),
     world_info: WorldInfoChatSettings.prefault({}),
   })
   .prefault({});

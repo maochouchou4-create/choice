@@ -1,4 +1,4 @@
-export type TabId = 'pool' | 'generation' | 'prompt' | 'api' | 'worldinfo' | 'filter' | 'appearance' | 'debug';
+export type TabId = 'pool' | 'generation' | 'api' | 'worldinfo' | 'filter' | 'appearance' | 'debug';
 
 export interface TabDefinition {
   id: TabId;
@@ -15,7 +15,6 @@ export interface GuideContent {
 export const INLINE_TABS: TabDefinition[] = [
   { id: 'pool', label: '条目池', icon: 'fa-solid fa-layer-group' },
   { id: 'generation', label: '生成', icon: 'fa-solid fa-bolt' },
-  { id: 'prompt', label: '提示词', icon: 'fa-solid fa-align-left' },
   { id: 'api', label: 'API', icon: 'fa-solid fa-plug' },
   { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
   { id: 'filter', label: '过滤', icon: 'fa-solid fa-filter' },
@@ -26,7 +25,6 @@ export const INLINE_TABS: TabDefinition[] = [
 export const FLOATING_TABS: TabDefinition[] = [
   { id: 'pool', label: '条目池', icon: 'fa-solid fa-layer-group' },
   { id: 'generation', label: '生成', icon: 'fa-solid fa-bolt' },
-  { id: 'prompt', label: '提示词', icon: 'fa-solid fa-align-left' },
   { id: 'api', label: 'API', icon: 'fa-solid fa-plug' },
   { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
   { id: 'filter', label: '过滤', icon: 'fa-solid fa-filter' },
@@ -57,16 +55,9 @@ export const GUIDE_CONTENTS: Record<TabId, GuideContent> = {
     title: '生成行为',
     html: `<p><strong>自动生成</strong>：开启后，每次 AI 回复完成时自动触发选项生成，无需手动点击"生成"按钮。此设置为聊天级，仅对当前对话生效。</p>
 <p><strong>行为模式</strong>：控制点击选项后的动作——发送（直接发送消息）、覆盖（填入输入框替换现有内容）、尾附（追加到输入框末尾）。</p>
+<p><strong>上下文范围</strong>：控制发送给 AI 的聊天记录——"轮数模式"取最后 N 轮（含隐藏消息），"仅可见消息"不限轮数、排除隐藏消息。</p>
+<p><strong>预填充</strong>：在消息末尾预写 AI 开头以引导输出格式，不支持的模型可关闭。</p>
 <p><strong>提示</strong>：在选项面板的头部，也可以直接切换发送/覆盖/尾附模式，两处设置保持同步。</p>`,
-  },
-  prompt: {
-    icon: 'fa-solid fa-align-left',
-    title: '提示词编辑器',
-    html: `<p><strong>模块化设计</strong>：提示词由多个模块组成，每个模块对应一个角色（system=系统指令、user=用户输入、assistant=AI 预设回复）。模块可拖拽排序、双击重命名、复制、编辑。</p>
-<p><strong>上下文轮数</strong>：控制发送给 AI 的历史消息数量。"轮数模式"取最后 N 轮，"仅可见消息"排除隐藏消息。</p>
-<p><strong>聊天记录过滤</strong>：在发送前自动移除思维链、小剧场标签等冗余内容，提升生成质量。支持标签匹配和正则表达式两种规则。</p>
-<p><strong>新手快捷编辑</strong>：顶部的"叙述风格"和"选项规则"是 core_rules（规则）模块的快捷入口，无需打开模块编辑即可快速调整核心约束。</p>
-<p><strong>不可编辑模块</strong>（🔒标记）是系统自动管理的，如世界书条目、角色描述等，无法修改或删除。</p>`,
   },
   api: {
     icon: 'fa-solid fa-plug',
@@ -96,7 +87,6 @@ export const GUIDE_CONTENTS: Record<TabId, GuideContent> = {
     icon: 'fa-solid fa-palette',
     title: '外观',
     html: `<p><strong>悬浮窗</strong>：在屏幕右下角显示一个快捷按钮，点击打开设置面板，拖动可改变位置。关闭后从设置面板入口进入。</p>
-<p><strong>输入润色</strong>：在发送消息前，用 AI 将你的输入改写成多个润色版本供选择。右侧数字控制生成几个版本。</p>
 <p><strong>主题</strong>：暗色/亮色切换，影响设置面板、选项面板等所有扩展 UI。</p>
 <p><strong>透明度</strong>：调整面板背景透明度，数值越低越透明。</p>
 <p><strong>字体大小</strong>：小/中/大三档，影响选项按钮和面板内的文字大小。</p>`,

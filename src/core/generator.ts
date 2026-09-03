@@ -6,13 +6,12 @@ import { uuidv4 } from '@sillytavern/scripts/utils';
 import { power_user } from '@sillytavern/scripts/power-user';
 import { resolvePool } from '@/core/pool-resolver';
 import { callSecondaryApiWithRetry, type ChatMsg } from '@/core/api-client';
-import { getBaiBaiSummary } from '@/core/baibai-bridge';
 import { useChatSettingsStore } from '@/store/chat-settings';
 import { useGlobalSettingsStore } from '@/store/global-settings';
 import { usePoolSelectorStore } from '@/store/pool-selector';
 import type { ChoiceGeneration } from '@/core/options-store';
 import type { PromptModule, SecondaryApi, WorldInfoGlobalSettings } from '@/type/settings';
-import { DEFAULT_MODULES, CORE_RULES_STATIC, GenerationSettings } from '@/type/settings';
+import { DEFAULT_MODULES, GenerationSettings } from '@/type/settings';
 
 export type GenerateTarget = { messageId: number; swipeId: number };
 
@@ -152,44 +151,8 @@ export const buildMessages = async (
         }
         break;
       }
-      case 'baibai_summary': {
-        if (!gs.settings.prompt_rules.baibai_enabled) break;
-        const text = getBaiBaiSummary();
-        if (text) {
-          msgs.push({
-            role: 'system',
-            content: `<baibai_summary>\n以下为记忆系统对已发生剧情的压缩摘要，记录的是已离开当前上下文窗口、不再直接可见的历史角色扮演事件。仅供你参考以保持剧情连贯，不得在回复中直接引用或复述其中内容。\n${text}\n</baibai_summary>`,
-          });
-        }
-        break;
-      }
-
       case 'user_instruction': {
         const content = sub(mod.content, augmentedCtx);
-        if (content) msgs.push({ role: mod.role, content });
-        break;
-      }
-      case 'core_rules': {
-        const pr = gs.settings.prompt_rules;
-        const personStyle = pr.person_style || '';
-        const optionRules = pr.option_rules || '';
-        // person_style 优先（高级用户覆盖），回退到 option_person 自动生成
-        let content: string;
-        if (optionRules && (personStyle || pr.option_person)) {
-          const effectivePersonStyle =
-            personStyle ||
-            `选项内容以${pr.option_person || '第三人称'} {{user}} 为绝对主语，融入微表情、肢体语言、语气特征或感官体验，让 {{user}} 看起来是一个鲜活的参与者。例外：他人视角、与此同时、转场推进 三类不受绝对主语约束。鼓励在动作描写中加入与当前环境或道具的物理交互，避免角色像在真空中对话。选项的切入点须紧扣正文末尾其他角色的当前状态。`;
-          content = `【核心规则 - 生成选项时严格遵守】
-${optionRules}
-
-【叙述风格】
-${effectivePersonStyle}
-
-${CORE_RULES_STATIC}`;
-        } else {
-          content = mod.content;
-        }
-        content = substituteParams(sub(content, augmentedCtx));
         if (content) msgs.push({ role: mod.role, content });
         break;
       }
@@ -527,11 +490,9 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
     };
     const rules = gs.settings.prompt_rules;
 
-    let enabledModules = gs.sortedEnabledModules;
-    if (!enabledModules || enabledModules.length === 0) {
-      enabledModules = [...DEFAULT_MODULES].sort((a, b) => a.order - b.order);
-    }
-    let messages = await buildMessages(enabledModules, c, gwi, rules.context_rounds);
+    // 提示词模块唯一来源是 default-prompt-modules.json（代码级，无存档无 UI 编辑）
+    const enabledModules = [...DEFAULT_MODULES].sort((a, b) => a.order - b.order);
+    const messages = await buildMessages(enabledModules, c, gwi, rules.context_rounds);
 
     const api = resolveCustomApi(gs.settings.active_api_id, gs.settings.apis);
     if (!api) {
@@ -573,7 +534,7 @@ export function cancelGeneration() {
   generatorState.generationId = null;
 }
 
-/** 条目池生成系统提示词：写死，不进 PromptEditor、不依赖预设。
+/** 条目池生成系统提示词：写死在代码、不依赖预设。
  *  与行动选项生成提示词刻意分离：输出契约是 JSON 数组（type/content/rule/replace），
  *  与行动选项输出改 JSON 的决策同向，但结构不同，故不复用 parseOptions。
  *  条目种类跟随用户要求而非写死"行动方向"——条目库重构后 type/rule 是一等字段，

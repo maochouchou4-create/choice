@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.0.8 (2026-09-03)
+
+### 提示词体系重构（破坏性：旧存档的提示词部分不兼容）
+- 删除提示词编辑界面（行内/悬浮两处 tab）与整套多配置体系（配置快照、聊天/角色绑定、导入导出、拖拽排序）——提示词正文不再存档、不再有 UI，由维护者直接改代码
+- 提示词模块唯一来源改为根目录 `default-prompt-modules.json`（原 `choice-prompts-optimized.json` 更名）：core_rules 的三段拼接（option_rules / person_style / CORE_RULES_STATIC 常量 + generator 运行时组装）合并为 JSON 内完整正文
+- 清除提示词正文中的"输入润色"模式残留（system_prompt 双模式介绍、assistant_ack 模式判断话术）——润色功能早已删除，但该文本此前一直随提示词真实发送
+- 移除柏宝书桥接全链路（baibai-bridge.ts、baibai_enabled 开关、baibai_summary/baibai_state 模块）
+- 上下文模式/轮数与预填充开关迁入「生成」tab（原提示词页顶栏），运行时语义不变；`prompt_rules` 存档收缩为纯运行时参数（上下文/预填充/人称/字数）
+- 删除提示词 17 版迁移链与 v19 配置分流（约 620 行），旧存档相关字段由 Zod 直接剥离；连带清除 option_only 死字段、孤儿 ChatFilterGroup schema、零引用的 store 导出
+- global-settings store 从 1224 行瘦身至约 470 行
+
+### 类型检查
+- 新增 `tsconfig.typecheck.json`：`@sillytavern/*` 类型映射指向 `../TauriTavern/src`（实际使用的酒馆分支源码），开发克隆内可跑 vue-tsc
+- 修复 `default-pool.ts` 失效的类型导入（`'./settings'`→`'@/type/settings'`，此前被 import type 编译期擦除掩盖）
+
+### 文档
+- AGENTS.md 同步新架构（提示词单源约束、类型检查说明、目录清单），清理已删功能的过时文案（输入润色、目录中不存在的文件）
+
 ## v0.0.7 (2026-08-29)
 
 ### 提示词导入

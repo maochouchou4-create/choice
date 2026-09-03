@@ -16,7 +16,7 @@ SillyTavern 第三方扩展，基于 `tavern_extension_template` 二次开发。
 - **技术栈边界**：严格用 TS + Vue 3 SFC + Pinia + Zod，不允许手写jQuery/直接DOM操作（`document.createElement`、`.innerHTML`拼接这类）。参考模板自带的Vue+Pinia+Zod示例风格。不引入 Tailwind/UnoCSS 等原子化 CSS 框架（样式方案为原生 CSS custom property，`src/theme.css` 定义全部 `--choice-*` 变量；`@tailwindcss/postcss` 等 devDep 为未接线残留，vite 配置无 postcss 插件，CSS 入口无 `@import "tailwindcss"`，勿引入 Tailwind）。
 - **设置一律走 Pinia store**：组件内不允许直接读写 `extension_settings`/`chat_metadata`/`character.data.extensions`，必须经过对应的 `useXxxStore()`。
 - **`@sillytavern` 导入的隔离原则**：这类导入（直接摸真实酒馆源码，不是npm包）只允许出现在 `src/core/` 下的文件里，不允许散落进Vue组件——酒馆升级导致导出改名时，改动范围收窄在这几个文件。
-- **禁止把TavernHelper/酒馆变量系统当作对第三方插件（柏宝书等）的硬依赖**：条件表达式统一走ST原生变量（`getvar`/`setvar`/`chat_metadata.variables`），不直接读取任何第三方插件内部数据结构。后续如需联动柏宝书摘要/总结，做成可选的、检测式的桥接模块，不影响主体功能可用性。
+- **禁止把TavernHelper/酒馆变量系统当作对第三方插件的硬依赖**：条件表达式统一走ST原生变量（`getvar`/`setvar`/`chat_metadata.variables`），不直接读取任何第三方插件内部数据结构（曾有的柏宝书可选桥接已整体移除，勿复活）。
 - **提示词组装必须走角色结构，不允许拼成一整段字符串塞进单条user消息**：
   - `system`（或`systemPrompt`）＝ 提示词编辑区设置的规则（第几人称、格式、字数等）
   - `user`（或`prompt`）＝ 抽中的固定/随机条目素材 + 按轮数截取的上下文
@@ -30,12 +30,11 @@ SillyTavern 第三方扩展，基于 `tavern_extension_template` 二次开发。
   - **常见 footgun**：① 把多个 config 的 entries 合并；② 从 config 而非 master_pool 读条目内容；③ 忘记 master_pool 是内容唯一真相源。
 - **楼层持久化挂在消息对象上**：生成结果存进对应AI消息的 `message.extra['asyncActionOptions']`，按 `swipe_id` 再分一层（类似swipe机制），保证切楼层/切swipe时选项历史不串。同楼层多次生成走 `generations[]` + `currentIndex` 翻页，不跨楼层保留。
 - **聊天生成支持两种模式**：聊天内模式（与角色卡绑定，读取世界书和聊天记录）和全局模式（全局持久化，不读取世界书和聊天记录）。用户可手动切换。
-- **enrich 模块需置于 assistant 模块之上**，确保润色指令在 assistant_ack 之前发送。润色输出**固定第三人称**，每条选项字数 **30-80 个中文字符**。
-- **提示词同样走 config 选择**：`prompt_config_id` 的解析逻辑与条目池对称（`chat > character > default`），不要假设提示词模块是全局唯一。
+- **提示词模块无 UI、无存档**：唯一来源是根目录 `default-prompt-modules.json`，运行时按模块 role/order 组装（`generator.ts` 的 `sub()` 替换 `{{count}}`/`{{min_chars}}` 等模板变量，`{{user}}` 走 ST `substituteParams`）。改提示词正文 = 改该 JSON；`prompt_rules` 存档字段只剩运行时开关（上下文模式/轮数、预填充、选项人称/字数），不要往存档里加提示词正文字段。
 
 ## UI 设计系统与约定
 
-当前 UI 正在做系统性翻新（原因：`theme.css` 只有颜色 token，没有间距/字号体系，各组件各写各的 padding；`EntryPoolDialog.vue`/`PoolEditor.vue`/`PromptEditor.vue` 这类信息密集页面一行塞多个控件、头部堆多个纯图标按钮，是"混乱"感的主要来源）。以下是已确认的方向，改 UI 相关代码前先看这节，避免和已定方案冲突。
+当前 UI 正在做系统性翻新（原因：`theme.css` 只有颜色 token，没有间距/字号体系，各组件各写各的 padding；`EntryPoolDialog.vue`/`PoolEditor.vue` 这类信息密集页面一行塞多个控件、头部堆多个纯图标按钮，是"混乱"感的主要来源）。以下是已确认的方向，改 UI 相关代码前先看这节，避免和已定方案冲突。
 
 ### 设计原则
 - 不换主色调（`--choice-primary` 蓝色系已验证可用，`ActionOptionsPanel.vue` 是现有代码里视觉完成度最高的部分，只做细节打磨，不大改）。
@@ -92,9 +91,9 @@ export function useCompactLayout(target: Ref<HTMLElement | null>) {
 
 ## 目录（按实际文件结构，注意与早期规划稿的差异）
 
-- `src/core/` — `generator.ts`（单独调用API生成选项/条目池，结构化role prompt，支持取消，含 `resolveCustomApi` API 校验）、`pool-resolver.ts`（条件过滤+分组加权抽取，纯函数，接收已解析的 effectivePool）、`options-store.ts`（`message.extra`存取，含swipe维度、翻页）、`floating-state.ts`（悬浮球/悬浮面板共享状态）、`enrich-input.ts`（输入润色模式）、`api-client.ts`（API 请求封装）、`baibai-bridge.ts`（柏宝书可选桥接）、`panel-mount.ts`（面板挂载逻辑）、`theme-detector.ts`（主题检测）、`variable-bridge.ts`（ST 原生变量桥接）、`wand-menu.ts`（魔杖菜单集成）。
-- `src/store/` — `global-settings.ts`（对应`extension_settings`）、`character-settings.ts`（对应角色卡`data.extensions`）、`chat-settings.ts`（对应`chat_metadata`）、`pool-selector.ts`（组合三个store，解析 master_pool + config 覆盖后的 `effectivePool`/`effectiveConfig`）、`prompt-config-selector.ts`（提示词配置选择，`prompt_config_id` 的 chat>character>default 解析）、`panel-state.ts`（面板展开/折叠、当前楼层/swipe追踪）。
-- `src/components/` — 主形态 `ActionOptionsPanel.vue`；悬浮形态 `FloatingBubble.vue` + `FloatingRoot.vue` + `FloatingSettings.vue` + `FloatingContextMenu.vue`；设置区 `SettingsPanel.vue` + 7 个 tab 组件（`GenerationSettings.vue`/`PromptEditor.vue`/`ApiEditor.vue`/`WorldInfoEditor.vue`/`AppearanceSettings.vue`/`DebugSettings.vue` 等）；条目池管理 `PoolEditor.vue`/`EntryPoolDialog.vue`/`PoolGenDialog.vue`/`SelectEntriesDialog.vue`/`ImportPoolDialog.vue`/`FilterEditor.vue`/`FilterGroupPanel.vue`；通用 `ConfirmDialog.vue`/`CreateConfigDialog.vue`/`GuidePopover.vue`/`PageGuide.vue`/`RegexLibraryDialog.vue`；`shared/`（设计系统基础组件，见上节）。
+- `src/core/` — `generator.ts`（单独调用API生成选项/条目池，结构化role prompt，支持取消，含 `resolveCustomApi` API 校验）、`pool-resolver.ts`（条件过滤+分组加权抽取，纯函数，接收已解析的 effectivePool）、`options-store.ts`（`message.extra`存取，含swipe维度、翻页）、`default-pool.ts`（出厂默认条目池单一事实源）、`floating-state.ts`（悬浮球/悬浮面板共享状态）、`api-client.ts`（API 请求封装）、`panel-mount.ts`（面板挂载逻辑）、`st-character.ts`/`st-regex-source.ts`（酒馆角色卡/正则脚本读取隔离层）、`theme-detector.ts`（主题检测）、`wand-menu.ts`（魔杖菜单集成）。
+- `src/store/` — `global-settings.ts`（对应`extension_settings`）、`character-settings.ts`（对应角色卡`data.extensions`）、`chat-settings.ts`（对应`chat_metadata`）、`pool-selector.ts`（组合三个store，解析 master_pool + config 覆盖后的 `effectivePool`/`effectiveConfig`）、`panel-state.ts`（面板展开/折叠、当前楼层/swipe追踪）。
+- `src/components/` — 主形态 `ActionOptionsPanel.vue`；悬浮形态 `FloatingBubble.vue` + `FloatingRoot.vue` + `FloatingSettings.vue` + `FloatingContextMenu.vue`；设置区 `SettingsPanel.vue` + 6 个 tab 组件（`PoolEditor.vue`/`GenerationSettings.vue`/`ApiEditor.vue`/`WorldInfoEditor.vue`/`AppearanceSettings.vue`/`DebugSettings.vue`）；条目池管理 `EntryPoolDialog.vue`/`PoolGenDialog.vue`/`SelectEntriesDialog.vue`/`FilterEditor.vue`/`FilterGroupPanel.vue`/`StRegexImportDialog.vue`；通用 `ConfirmDialog.vue`/`CreateConfigDialog.vue`/`GuidePopover.vue`/`RegexLibraryDialog.vue`；`shared/`（设计系统基础组件，见上节）。
 - `docs/` — 技术方案文档（`async-action-options-spec.md`）与早期MVP原型，作为背景参考，不是当前实现标准；UI 重构方案见另外维护的 `choice-ui-redesign-spec.md`（主体页面）与 `choice-floating-bubble-design.md`（悬浮球专项），本文件是二者的执行摘要，细节推理以那两份为准。
 
 ## 条目池模型 & 抽取算法要点
@@ -107,9 +106,11 @@ export function useCompactLayout(target: Ref<HTMLElement | null>) {
 
 ```bash
 pnpm install
-pnpm build          # 一次性打包，验证TS类型和构建是否通过
-npx vue-tsc --noEmit # 单独跑类型检查，退出码必须为 0（类型债已清零，勿新增）
+pnpm build          # 一次性打包，验证构建是否通过
+npx vue-tsc --noEmit -p tsconfig.typecheck.json  # 类型检查，src/ 内必须 0 错误（类型债已清零，勿新增）
 ```
+
+类型检查说明：主 `tsconfig.json` 的 `@sillytavern/*` paths 按扩展安装在酒馆目录内的相对深度写死（上跳四级），开发克隆里解析不到；`tsconfig.typecheck.json` 把它映射到 `../TauriTavern/src`（用户实际使用的酒馆分支克隆，网页根在 `src/`）。看结果只看 `src/` 开头的行——`../TauriTavern/**` 内的报错是酒馆自身代码（Tauri 侧全局变量等），不归本仓库。eslint 的 `import-x/no-unresolved`（`@sillytavern/*`）同理是解析环境差异；`EntryPoolDialog.vue` 的 no-lonely-if、`generator.ts` 的 no-useless-escape 为存量错误，勿新增。
 
 **`pnpm watch` 由我在独立终端里全程跑着**，不需要agent自己调用——`watch`是常驻进程不会退出，agent的工具调用是"跑命令等结束"模式，扔给它一个不结束的命令会卡住。agent只需要用一次性的`pnpm build`（或`vue-tsc --noEmit`）自查有没有类型/编译错误。
 

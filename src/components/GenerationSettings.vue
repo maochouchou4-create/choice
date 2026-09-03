@@ -52,6 +52,49 @@
     <div class="choice-generation-section">
       <div class="choice-field">
         <div class="choice-field-label">
+          <label>{{ t`上下文范围` }}</label>
+        </div>
+        <small class="choice-field-hint">{{ t`决定发送给 AI 的聊天记录范围` }}</small>
+      </div>
+      <div class="choice-count-row">
+        <label class="choice-count-item" :title="t`轮数模式取最后 N 轮（含隐藏消息）；仅可见消息不限轮数、排除隐藏消息`">
+          <select v-model="rules.context_mode" class="text_pole" style="width: auto">
+            <option value="rounds">{{ t`轮数模式` }}</option>
+            <option value="visible_only">{{ t`仅可见消息` }}</option>
+          </select>
+        </label>
+        <label v-if="rules.context_mode === 'rounds'" class="choice-count-item">
+          <span>{{ t`轮数` }}</span>
+          <input
+            v-model.number="rules.context_rounds"
+            class="text_pole"
+            style="width: 60px"
+            type="number"
+            min="0"
+            :title="t`取最后 N 轮对话发送给 AI`"
+          />
+        </label>
+      </div>
+    </div>
+
+    <div class="choice-generation-section">
+      <label class="choice-check">
+        <input
+          v-model="rules.prefill_enabled"
+          type="checkbox"
+          :title="t`关闭后不发送 assistant 预填充消息，兼容不支持 prefill 的模型`"
+        />
+        <span class="choice-check-custom"></span>
+        <span class="choice-check-label">
+          <strong>{{ t`预填充` }}</strong>
+          <small>{{ t`在消息末尾预写 AI 开头以引导输出格式，不支持 prefill 的模型可关闭` }}</small>
+        </span>
+      </label>
+    </div>
+
+    <div class="choice-generation-section">
+      <div class="choice-field">
+        <div class="choice-field-label">
           <label>{{ t`生成数量` }}</label>
         </div>
         <small class="choice-field-hint">{{ t`固定数量（如 5）` }}</small>

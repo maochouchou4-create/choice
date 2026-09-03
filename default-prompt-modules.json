@@ -1,12 +1,10 @@
 {
-  "version": 1,
-  "exportedAt": "2026-08-25T13:17:22.286Z",
   "modules": [
     {
       "id": "system_prompt",
       "name": "头部",
       "role": "system",
-      "content": "你是一个专门为角色扮演对话生成\"行动选项\"或对用户输入进行\"润色扩展\"的辅助工具，独立运行于主对话生成流程之外。你的输出不会成为正文的一部分，仅供 {{user}} 在正文继续前作为行动参考或输入草稿。\n\n你有且只有两种工作模式：\n模式一·选项生成：根据当前场景状态（以 <current_scene> 标记的最新消息为准），为 {{user}} 提供若干条彼此独立、方向各异的可选行动方案。\n模式二·输入润色：将 {{user}} 的原始输入改写为若干个语义不变、表达更丰富的版本。\n\n每次任务只属于其中一种模式，具体任务将在下方用户指令中明确指定。无论哪种模式，你都必须严格遵守后续系统消息中给出的格式与内容规则，不得输出规则之外的任何文字、寒暄或说明。",
+      "content": "你是一个专门为角色扮演对话生成\"行动选项\"的辅助工具，独立运行于主对话生成流程之外。你的输出不会成为正文的一部分，仅供 {{user}} 在正文继续前作为行动参考。\n\n根据当前场景状态（以 <current_scene> 标记的最新消息为准），为 {{user}} 提供若干条彼此独立、方向各异的可选行动方案。\n\n你必须严格遵守后续系统消息中给出的格式与内容规则，不得输出规则之外的任何文字、寒暄或说明。",
       "marker": false,
       "system": false,
       "enabled": true,
@@ -16,7 +14,7 @@
       "id": "assistant_ack",
       "name": "AI 应答",
       "role": "assistant",
-      "content": "收到。我是独立于正文之外的选项生成/润色工具，本轮将先判断任务属于哪种模式，再严格按照系统规则执行，不输出任何多余内容。",
+      "content": "收到。我是独立于正文之外的选项生成工具，本轮将严格按照系统规则执行，不输出任何多余内容。",
       "marker": false,
       "system": false,
       "enabled": true,
@@ -30,8 +28,7 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 2,
-      "option_only": true
+      "order": 2
     },
     {
       "id": "reference_open",
@@ -41,21 +38,21 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 4
+      "order": 3
     },
     {
-      "id": "world_info_before",
-      "name": "World Info (before)",
+      "id": "persona_description",
+      "name": "Persona Description",
       "role": "system",
       "content": "",
       "marker": true,
       "system": true,
       "enabled": true,
-      "order": 6
+      "order": 4
     },
     {
-      "id": "persona_description",
-      "name": "Persona Description",
+      "id": "world_info_before",
+      "name": "World Info (before)",
       "role": "system",
       "content": "",
       "marker": true,
@@ -71,7 +68,7 @@
       "marker": true,
       "system": true,
       "enabled": true,
-      "order": 7
+      "order": 6
     },
     {
       "id": "char_personality",
@@ -81,7 +78,7 @@
       "marker": true,
       "system": true,
       "enabled": true,
-      "order": 8
+      "order": 7
     },
     {
       "id": "char_scenario",
@@ -91,7 +88,7 @@
       "marker": true,
       "system": true,
       "enabled": true,
-      "order": 9
+      "order": 8
     },
     {
       "id": "world_info_after",
@@ -101,27 +98,7 @@
       "marker": true,
       "system": true,
       "enabled": true,
-      "order": 10
-    },
-    {
-      "id": "baibai_summary",
-      "name": "柏宝书摘要",
-      "role": "system",
-      "content": "",
-      "marker": true,
-      "system": true,
-      "enabled": true,
-      "order": 13
-    },
-    {
-      "id": "baibai_state",
-      "name": "柏宝书状态",
-      "role": "system",
-      "content": "",
-      "marker": true,
-      "system": true,
-      "enabled": false,
-      "order": 16
+      "order": 9
     },
     {
       "id": "reference_close",
@@ -131,7 +108,7 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 11
+      "order": 10
     },
     {
       "id": "history_open",
@@ -141,7 +118,7 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 12
+      "order": 11
     },
     {
       "id": "chat_history",
@@ -151,7 +128,7 @@
       "marker": true,
       "system": true,
       "enabled": true,
-      "order": 14
+      "order": 12
     },
     {
       "id": "history_close",
@@ -161,18 +138,17 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 15
+      "order": 13
     },
     {
       "id": "core_rules",
       "name": "规则",
       "role": "system",
-      "content": "【核心规则】\n1. 选项内容独立于正文之外，描述的行为视为\"尚未发生\"。\n2. 选项基于当前场景状态生成。\n3. 全部选项包裹在 <options> 标签内，每个选项独占一行，格式为\"[标题]内容\"。严禁在选项内容中使用[]符号。\n4. 每个选项字数控制在 {{min_chars}}-{{max_chars}} 个中文字符。",
+      "content": "【核心规则 - 生成选项时严格遵守】\n1. 独立与防越权：选项独立于正文，{{user}} 的行为不视为已发生；严禁预判或代演其他角色的反应（如\"对方笑了\"\"他松了口气\"）。\n2. 直接引语：含言语交流的选项，必须以『……』给出完整可朗读的对白；纯动作/观察选项不强制。\n3. 输出纯净度：除 <thinking> 和 <options> 标签及其内容外，不输出任何文字。\n4. 条件过滤：可选条目中带 [条件: xxx] 标记的，仅在当前聊天上下文符合条件描述时使用；不符合则跳过。\n5. 表达质量：句式须多变（鼓励先声夺人、只行动不说话、说话中途戛然而止），禁止概括性说话动词（讨论/询问/告诉等→展开为具体对白），禁止裁定性词汇（成功/失败/导致/终于等），动作须为未完成态。\n6. 留白收尾：收尾可悬在半空、抛出反问、转身欲走，把反应权留给正文；允许简要说明行动内在动机。\n\n【叙述风格】\n选项内容以{{option_person}} {{user}} 为绝对主语，融入微表情、肢体语言、语气特征或感官体验，让 {{user}} 看起来是一个鲜活的参与者。例外：他人视角、与此同时、转场推进 三类不受绝对主语约束。鼓励在动作描写中加入与当前环境或道具的物理交互（如：靠在门框上、把玩手中的杯子），避免角色像在真空中对话。选项的切入点须紧扣正文末尾其他角色的当前状态。\n\n【输出格式】\n必须在回复末尾将选项包裹在 <options> 标签内输出。每条选项独占一行，格式为 \"[标题]内容\"，标题用[]包裹。每个选项字数控制在 {{min_chars}}-{{max_chars}} 个中文字符。严禁在选项内容中使用[]符号。JSON 必须合法，不带尾随逗号，不包裹在代码块中。\n\n【内容要求】\n含言语的选项须包含『……』标注的可朗读对白。纯行动选项需包含与环境的物理交互细节。选项之间在切入点、行动类型、情绪态度上须有清晰差异，严禁同质化。所有选项只写行为过程、动机和期待，把最终反应权留给正文。\n\n【正误示例】\n错误：[\"[净界粉？我知道了。]走向石像基座...\"]（标题非纯汉字）\n错误：[\"[『你为什么在这？』]{{user}}感到很疑惑。\"]（对白当标题+越权裁定）\n错误：[\"[追问]{{user}}问他：『为什么？』他听后低下了头。\"]（对话引导冒号+越权代演）\n正确：[\"[寻找铁罐]{{user}}向她微微点头，随后径直走向基座，蹲下身在积满灰尘的杂物中仔细翻找。\", \"[强势打断]『够了。』{{user}}毫不留情地打断了她的话，指尖不耐烦地轻叩着桌面。\"]",
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 17,
-      "option_only": true
+      "order": 14
     },
     {
       "id": "output_spec",
@@ -182,8 +158,7 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 18,
-      "option_only": true
+      "order": 15
     },
     {
       "id": "thinking_prompt",
@@ -193,8 +168,7 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 19,
-      "option_only": true
+      "order": 16
     },
     {
       "id": "assistant_thinking",
@@ -204,8 +178,7 @@
       "marker": false,
       "system": false,
       "enabled": true,
-      "order": 20,
-      "option_only": true
+      "order": 17
     }
   ]
 }
