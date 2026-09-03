@@ -3,7 +3,6 @@ import type { PoolEntry } from '@/type/settings';
 export type ResolvePoolInput = {
   effectivePool: PoolEntry[];
   count: number;
-  categoriesEnabled: boolean;
   shuffleFinal: boolean;
   pinnedOverflow: 'send_all' | 'trim';
 };
@@ -37,44 +36,6 @@ const weightedPick = (entries: PoolEntry[], amount: number): PoolEntry[] => {
     .map(item => item.entry);
 };
 
-const drawByCategories = (pool: PoolEntry[], amount: number): PoolEntry[] => {
-  if (amount <= 0 || pool.length === 0) {
-    return [];
-  }
-  const groups = new Map<string, PoolEntry[]>();
-  for (const entry of pool) {
-    const key = entry.category || '';
-    let group = groups.get(key);
-    if (!group) {
-      group = [];
-      groups.set(key, group);
-    }
-    group.push(entry);
-  }
-  const groupOrder = shuffled([...groups.keys()]);
-  const drawn: PoolEntry[] = [];
-  while (drawn.length < amount) {
-    let pickedAny = false;
-    for (const key of groupOrder) {
-      if (drawn.length >= amount) {
-        break;
-      }
-      const group = groups.get(key);
-      if (!group || group.length === 0) {
-        continue;
-      }
-      const pick = weightedPick(group, 1)[0];
-      group.splice(group.indexOf(pick), 1);
-      drawn.push(pick);
-      pickedAny = true;
-    }
-    if (!pickedAny) {
-      break;
-    }
-  }
-  return drawn;
-};
-
 export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
   const pinned = input.effectivePool.filter(entry => entry.pinned);
   const pool = input.effectivePool.filter(entry => !entry.pinned);
@@ -93,7 +54,9 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
     remaining = Math.max(input.count - pinnedUsed.length, 0);
   }
 
-  const drawn = input.categoriesEnabled ? drawByCategories(pool, remaining) : weightedPick(pool, remaining);
+  // 分组轮抽已删（用户拍板：会抽到不适合的分组）——统一走全局加权抽取，
+  // 场景适配交给候选超发 + 生成 AI 终选
+  const drawn = weightedPick(pool, remaining);
 
   let selected = [...pinnedUsed, ...drawn];
   if (input.shuffleFinal) {

@@ -99,7 +99,7 @@ export function useCompactLayout(target: Ref<HTMLElement | null>) {
 ## 条目池模型 & 抽取算法要点
 
 - 条目字段（`PoolEntry`）：`id`、`type`、`content`、`rule`、`pinned`、`weight`、`category`、`condition`（表达式格式如`变量名 运算符 值`，例：`地点 == 医院`）。其中 `pinned`/`weight`/`condition` 可被 `PoolConfigEntry` 覆盖。
-- 抽取顺序：解析 effectivePool（config 选择 + 条目合并）→ 条件过滤（含固定条目，默认遵守过滤，可配开关）→ 拆分固定/非固定，处理溢出（默认固定条目不砍，全发）→ 按category分组，处理下溢（默认有多少抽多少，不跨层兜底；`cross_layer_fallback` 为历史遗留字段，已无实际层级可兜底）→ 分组轮询+组内加权无放回抽取（Efraimidis-Spirakis算法：`key = random()^(1/weight)`，降序取）→ 送入prompt前整体shuffle一次（默认开启，避免固定条目位置固定造成AI顺序偏好）。
+- 抽取顺序（pool-resolver.ts）：解析 effectivePool（config 选择 + 条目合并）→ 拆分固定/非固定，处理溢出（默认固定条目不砍，全发）→ 全局加权无放回抽取（Efraimidis-Spirakis：`key = random()^(1/weight)`，降序取）→ 送入 prompt 前整体 shuffle 一次。**分组轮抽已删**（用户拍板：会抽到不适合的分组）——category 仅作组织标签，不参与抽取逻辑；场景适配由候选超发（`candidate_multiplier`）+ 生成 AI 终选负责，`[条件: xxx]` 标记交 AI 判断可用性。
 - 详细算法与各开关的默认值见 `docs/async-action-options-spec.md` 第3节。
 
 ## 构建与验证

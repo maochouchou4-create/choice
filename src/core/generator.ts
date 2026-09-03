@@ -455,7 +455,6 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
     const pool = resolvePool({
       effectivePool: ps.effectivePool,
       count: count * multiplier,
-      categoriesEnabled: gen.categories_enabled,
       shuffleFinal: gen.shuffle_final,
       pinnedOverflow: gen.pinned_overflow,
     });

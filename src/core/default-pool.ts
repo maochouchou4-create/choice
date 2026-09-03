@@ -1,8 +1,8 @@
 import type { PoolEntry } from '@/type/settings';
 
 /** 条目池出厂默认：12 组 49 条（含 1 条 pinned 转场推进）。
- *  设计要点：分组即多样性单位（分组抽取开启时每轮从不同组轮抽）；
- *  场景性强的条目挂自由文本条件交由生成 AI 终选；冷门重口味组条目少即出场率低。 */
+ *  设计要点：全局加权抽取（分组轮抽已删——会抽到不适合的分组，场景适配交给候选超发+AI 终选）；
+ *  场景性强的条目挂自由文本条件交由生成 AI 终选；category 仅作组织标签，不参与抽取逻辑。 */
 export const DEFAULT_MASTER_POOL: PoolEntry[] = [
   {
     'id': '06281157-6887-483e-b9e8-a00f1f2f646e\r',
@@ -817,7 +817,6 @@ export const DEFAULT_POOL_CONFIGS = [
     'is_default': true,
     'generation': {
       'count_mode': '5',
-      'categories_enabled': true,
       'shuffle_final': true,
       'pinned_overflow': 'send_all',
       'candidate_multiplier': 2

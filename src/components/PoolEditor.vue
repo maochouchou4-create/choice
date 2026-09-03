@@ -64,10 +64,6 @@
       <div class="choice-inline-field">
         <label class="choice-inline-label">{{ t`抽取参数` }}</label>
         <div class="choice-inline-gen">
-          <label class="choice-check" :title="t`按条目分类分组轮流抽取，避免同组扎堆`">
-            <input v-model="selectedConfig.generation.categories_enabled" type="checkbox" />
-            {{ t`分组抽取` }}
-          </label>
           <label class="choice-check" :title="t`结果随机打乱，避免固定条目总在开头`">
             <input v-model="selectedConfig.generation.shuffle_final" type="checkbox" />
             {{ t`打乱结果` }}

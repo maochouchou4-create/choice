@@ -24,7 +24,6 @@ export type PoolEntry = z.infer<typeof PoolEntry>;
 export const GenerationSettings = z
   .object({
     count_mode: z.string().default('4'),
-    categories_enabled: z.boolean().default(true),
     shuffle_final: z.boolean().default(true),
     pinned_overflow: z.enum(['send_all', 'trim']).default('send_all'),
     // 候选超发倍数：抽签数 = 目标条数 × 倍数，超发候选由生成 AI 终选，过滤不合场景的条目

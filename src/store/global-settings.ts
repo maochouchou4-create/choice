@@ -81,7 +81,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
         is_default: true,
         generation: (oldGlobalGen as any) ?? {
           count_mode: '4',
-          categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
           candidate_multiplier: 2,
@@ -98,7 +97,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
         is_default: configs.length === 0,
         generation: {
           count_mode: '4',
-          categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
           candidate_multiplier: 2,
@@ -126,7 +124,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
         is_default: configs.length === 0,
         generation: {
           count_mode: '4',
-          categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
           candidate_multiplier: 2,
@@ -160,7 +157,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
         is_default: true,
         generation: {
           count_mode: '4',
-          categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
           candidate_multiplier: 2,
@@ -222,7 +218,6 @@ const applyDefaults = (validated: GlobalSettingsType) => {
           is_default: true,
           generation: {
             count_mode: '4',
-            categories_enabled: true,
             shuffle_final: true,
             pinned_overflow: 'send_all',
             candidate_multiplier: 2,
@@ -492,7 +487,6 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
         is_default: true,
         generation: {
           count_mode: '4',
-          categories_enabled: true,
           shuffle_final: true,
           pinned_overflow: 'send_all',
           candidate_multiplier: 2,
