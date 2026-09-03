@@ -71,10 +71,23 @@
         </button>
       </div>
     </div>
+
+    <div class="choice-appearance-section">
+      <span class="choice-appearance-section-title">{{ t`维护` }}</span>
+      <button
+        class="menu_button"
+        :title="t`删除所有设置并恢复为插件出厂默认值`"
+        @click="factoryReset"
+      >
+        <i class="fa-solid fa-rotate-left"></i>
+        {{ t`恢复出厂设置` }}
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import toastr from 'toastr';
 import { useGlobalSettingsStore } from '@/store/global-settings';
 
 const store = useGlobalSettingsStore();
@@ -85,6 +98,17 @@ const fontSizes = [
   { value: 'medium' as const, label: t`中`, tip: t`默认字体大小` },
   { value: 'large' as const, label: t`大`, tip: t`大号字体，方便阅读` },
 ];
+
+function factoryReset() {
+  if (
+    !confirm(
+      t`确定要恢复插件所有设置为出厂默认值吗？\n\n这将删除所有条目池、API 设置、UI 偏好等。\n此操作不可撤销！`,
+    )
+  )
+    return;
+  store.factoryReset();
+  toastr.success(t`已恢复出厂设置`);
+}
 </script>
 
 <style scoped>
@@ -230,43 +254,5 @@ const fontSizes = [
   background: var(--choice-primary);
   color: var(--choice-text-on-primary);
   box-shadow: 0 0 8px var(--choice-primary-glow);
-}
-
-.choice-opacity-slider {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--choice-bg-element);
-  appearance: none;
-  -webkit-appearance: none;
-  outline: none;
-  cursor: pointer;
-}
-
-.choice-opacity-slider::-webkit-slider-thumb {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--choice-primary);
-  border: 2px solid var(--choice-bg-panel);
-  box-shadow: 0 0 8px var(--choice-primary-glow);
-  cursor: pointer;
-  transition: transform var(--choice-transition);
-}
-
-.choice-opacity-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-}
-
-.choice-opacity-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--choice-primary);
-  border: 2px solid var(--choice-bg-panel);
-  box-shadow: 0 0 8px var(--choice-primary-glow);
-  cursor: pointer;
 }
 </style>

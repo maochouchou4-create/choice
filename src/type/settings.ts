@@ -207,7 +207,6 @@ export const UISettings = z
     theme: z.enum(['dark', 'light']).optional(),
     /** 主题模式：auto = 自动检测 ST 亮/暗，st = 完全跟随 ST 配色，dark/light = 手动覆盖 */
     theme_mode: z.enum(['auto', 'st', 'dark', 'light']).default('auto'),
-    opacity: z.number().min(0.3).max(1).default(0.88),
     font_size: z.enum(['small', 'medium', 'large']).default('medium'),
     /** 行内设置面板内容区高度（px），拖拽手柄可调整 */
     panel_height: z.number().min(300).max(800).default(500),

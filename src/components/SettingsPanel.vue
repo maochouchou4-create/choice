@@ -45,7 +45,6 @@
           <WorldInfoEditor v-else-if="activeTab === 'worldinfo'" />
           <FilterEditor v-else-if="activeTab === 'filter'" />
           <AppearanceSettings v-else-if="activeTab === 'appearance'" />
-          <DebugSettings v-else-if="activeTab === 'debug'" />
         </div>
 
         <div class="choice-panel-resize" title="拖拽调整高度" @mousedown="onResizeStart">
@@ -66,7 +65,6 @@ import GenerationSettings from '@/components/GenerationSettings.vue';
 import PoolEditor from '@/components/PoolEditor.vue';
 import FilterEditor from '@/components/FilterEditor.vue';
 import WorldInfoEditor from '@/components/WorldInfoEditor.vue';
-import DebugSettings from '@/components/DebugSettings.vue';
 import GuidePopover from '@/components/GuidePopover.vue';
 import { INLINE_TABS, GUIDE_CONTENTS, type TabId } from '@/components/shared/tab-definitions';
 

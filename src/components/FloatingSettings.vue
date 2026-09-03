@@ -61,7 +61,6 @@
           <WorldInfoEditor v-else-if="activeTab === 'worldinfo'" />
           <FilterEditor v-else-if="activeTab === 'filter'" />
           <AppearanceSettings v-else-if="activeTab === 'appearance'" />
-          <DebugSettings v-else-if="activeTab === 'debug'" />
         </div>
 
         <div class="choice-floating-resize" @mousedown="onResizeStart">
@@ -80,7 +79,6 @@ import PoolEditor from '@/components/PoolEditor.vue';
 import FilterEditor from '@/components/FilterEditor.vue';
 import WorldInfoEditor from '@/components/WorldInfoEditor.vue';
 import GuidePopover from '@/components/GuidePopover.vue';
-import DebugSettings from '@/components/DebugSettings.vue';
 import { FLOATING_TABS, GUIDE_CONTENTS, type TabId } from '@/components/shared/tab-definitions';
 import { isSettingsOpen, closeSettings } from '@/core/floating-state';
 

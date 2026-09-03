@@ -1,4 +1,4 @@
-export type TabId = 'pool' | 'generation' | 'api' | 'worldinfo' | 'filter' | 'appearance' | 'debug';
+export type TabId = 'pool' | 'generation' | 'api' | 'worldinfo' | 'filter' | 'appearance';
 
 export interface TabDefinition {
   id: TabId;
@@ -19,7 +19,6 @@ export const INLINE_TABS: TabDefinition[] = [
   { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
   { id: 'filter', label: '过滤', icon: 'fa-solid fa-filter' },
   { id: 'appearance', label: '外观', icon: 'fa-solid fa-palette' },
-  { id: 'debug', label: '调试', icon: 'fa-solid fa-gear' },
 ];
 
 export const FLOATING_TABS: TabDefinition[] = [
@@ -29,7 +28,6 @@ export const FLOATING_TABS: TabDefinition[] = [
   { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
   { id: 'filter', label: '过滤', icon: 'fa-solid fa-filter' },
   { id: 'appearance', label: '外观', icon: 'fa-solid fa-palette' },
-  { id: 'debug', label: '调试', icon: 'fa-solid fa-gear' },
 ];
 
 export const GUIDE_CONTENTS: Record<TabId, GuideContent> = {
@@ -88,13 +86,7 @@ export const GUIDE_CONTENTS: Record<TabId, GuideContent> = {
     title: '外观',
     html: `<p><strong>悬浮窗</strong>：在屏幕右下角显示一个快捷按钮，点击打开设置面板，拖动可改变位置。关闭后从设置面板入口进入。</p>
 <p><strong>主题</strong>：暗色/亮色切换，影响设置面板、选项面板等所有扩展 UI。</p>
-<p><strong>透明度</strong>：调整面板背景透明度，数值越低越透明。</p>
-<p><strong>字体大小</strong>：小/中/大三档，影响选项按钮和面板内的文字大小。</p>`,
-  },
-  debug: {
-    icon: 'fa-solid fa-gear',
-    title: '调试与维护',
-    html: `<p><strong>版本信息</strong>：显示当前数据版本和模块、条目等统计信息。</p>
-<p><strong>恢复出厂设置</strong>：删除所有设置并恢复为插件初始状态。⚠️ 此操作不可撤销，执行前请导出提示词备份。</p>`,
+<p><strong>字体大小</strong>：小/中/大三档，影响选项按钮和面板内的文字大小。</p>
+<p><strong>恢复出厂设置</strong>：删除插件全部设置（条目池、API、过滤等）并回到初始状态，不可撤销。</p>`,
   },
 };
