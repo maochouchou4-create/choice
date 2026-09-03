@@ -1,4 +1,4 @@
-import type { PoolEntry } from './settings';
+import type { PoolEntry } from '@/type/settings';
 
 /** 条目池出厂默认：12 组 49 条（含 1 条 pinned 转场推进）。
  *  设计要点：分组即多样性单位（分组抽取开启时每轮从不同组轮抽）；
