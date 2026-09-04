@@ -1,5 +1,5 @@
 import toastr from 'toastr';
-import type { SecondaryApi } from '@/type/settings';
+import { useGlobalSettingsStore } from '@/store/global-settings';
 
 /** 与酒馆 generate 端点对接的消息格式：system/user/assistant 三态分离。
  *  不拼成单段字符串塞进单条消息，遵循"提示词组装走角色结构"的架构约束。 */
@@ -7,142 +7,87 @@ export type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string }
 
 const GENERATE_URL = '/api/backends/chat-completions/generate';
 
-/** 规范化 OpenAI 兼容 API 地址：缺少 /v1 后缀时自动补全。
- *  已有版本路径（/v1, /v2...）或端点路径（/chat/completions...）时跳过。 */
-export function normalizeApiUrl(url: string): string {
-  const trimmed = url.trim();
-  if (!trimmed) return trimmed;
-  const clean = trimmed.replace(/\/+$/, '');
-  if (/\/v\d+$/i.test(clean) || /\/chat\/completions$/i.test(clean)) {
-    return clean;
-  }
-  return clean + '/v1';
-}
+/** DeepSeek 专用调用档案——无 UI 无存档，调整＝改这里→build→推 fork→TT 更新即生效。
+ *  - REASONING_EFFORT：V4 思考强度 low/high/max。默认 low（用户拍板：high 档思考过久）。
+ *    注意传输通道：TT 后端对 openai 源的 reasoning_effort 有 OpenAI 模型白名单（deepseek
+ *    会被静默丢弃）、对 deepseek 源会把 low/medium 折叠成 high——所以走 custom_include_body
+ *    （服务层在 payload 构建后无条件合并，官方注释"final upstream intent"），这是唯一能把
+ *    真实 low 送到 DeepSeek 的路径（源码核实：payload/openai.rs:163 + additional_parameters.rs:68）。
+ *  - 思考默认开启（v4 模型特性）；关闭需 thinking.type=disabled，未启用。
+ *  - temperature/top_p 不发：V4 思考模式下官方文档明确"设置不报错但不生效"。
+ *  - 非流式：弱网下流式断流（body_interrupted）面更大，整响应一次拿更稳。 */
+const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
+const DEEPSEEK_MODEL = 'deepseek-v4-flash';
+const REASONING_EFFORT = 'low';
+const MAX_TOKENS = 4096;
+const TIMEOUT_SECONDS = 180;
+/** 网络类错误自动重试次数（治弱网抖动），硬编码不设 UI */
+const RETRY_COUNT = 1;
 
-/** 统一副 API 调用入口：行动选项生成与条目池生成共用。
- *  直接 fetch 酒馆 generate 端点，绕开 TavernHelper 预设注入，
- *  保证传入的 messages 即最终入参（exclude_params 在此删除指定字段）。 */
-export async function callSecondaryApi(messages: ChatMsg[], api: SecondaryApi, signal?: AbortSignal): Promise<string> {
-  const body: Record<string, unknown> = {
-    chat_completion_source: 'openai',
-    reverse_proxy: normalizeApiUrl(api.apiurl),
-    proxy_password: api.key || '',
-    model: api.model,
-    messages,
-    temperature: api.temperature,
-    max_tokens: api.max_tokens,
-    stream: api.stream,
-  };
-
-  if (api.exclude_params) {
-    for (const key of api.exclude_params
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean)) {
-      delete body[key];
-    }
-  }
-
-  const ctx = window.SillyTavern?.getContext?.();
-  const resp = await fetch(GENERATE_URL, {
-    method: 'POST',
-    headers: ctx?.getRequestHeaders?.() ?? {},
-    body: JSON.stringify(body),
-    signal,
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    throw new Error(`API 请求失败 (${resp.status}): ${text.slice(0, 300)}`);
-  }
-
-  if (api.stream && resp.body) {
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let full = '';
-    let buffer = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-      const lines = buffer.split('\n');
-      // 最后一行可能不完整（跨 chunk 边界），保留到下次再拼接
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const json = JSON.parse(data);
-          const delta = json?.choices?.[0]?.delta?.content ?? '';
-          full += delta;
-        } catch {
-          /* 忽略解析失败的行 */
-        }
-      }
-    }
-    return full;
-  }
-
-  const data = await resp.json();
-  if (data?.error) throw new Error(data.error.message || 'API 返回错误');
-  return data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? '';
-}
-
-/** 判断 API 调用错误是否可重试：网络错误（TypeError）和 5xx 服务端错误可重试；
- *  4xx 客户端错误、AbortError、API 级错误（data.error）不重试。 */
-export function isRetryableError(e: unknown): boolean {
+/** 判断错误是否可重试：网络错误（TypeError）和 5xx 可重试；
+ *  4xx、AbortError、API 级错误（data.error）不重试。 */
+function isRetryableError(e: unknown): boolean {
   if (e instanceof DOMException && e.name === 'AbortError') return false;
   if (e instanceof TypeError) return true;
   if (e instanceof Error) {
     const m = e.message.match(/^API 请求失败 \((\d{3})\)/);
-    if (m) {
-      const status = parseInt(m[1], 10);
-      return status >= 500;
-    }
+    if (m) return parseInt(m[1], 10) >= 500;
   }
   return false;
 }
 
-/** 带重试的副 API 调用入口：根据 retryCount 自动重试可恢复错误。
- *  每次尝试独立 AbortController + 超时，外部取消信号联动所有尝试。
- *  重试间隔固定 1 秒，失败时通过 toastr 提示进度。 */
-export async function callSecondaryApiWithRetry(
-  messages: ChatMsg[],
-  api: SecondaryApi,
-  retryCount: number,
-  externalSignal?: AbortSignal,
-): Promise<string> {
-  const maxAttempts = retryCount + 1;
+/** DeepSeek 唯一调用入口（经酒馆 generate 端点转发，绕开 TavernHelper 预设注入）。
+ *  每次尝试独立 AbortController + 超时，外部取消信号联动所有尝试；重试间隔 1 秒。 */
+export async function callDeepSeekWithRetry(messages: ChatMsg[], externalSignal?: AbortSignal): Promise<string> {
+  const key = useGlobalSettingsStore().settings.deepseek_key;
+  if (!key) {
+    throw new Error('DeepSeek key 未配置（写入本地 settings.json 的 extension_settings.choice.deepseek_key）');
+  }
+
   let lastError: unknown;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  for (let attempt = 0; attempt < RETRY_COUNT + 1; attempt++) {
     const attemptController = new AbortController();
-
     const onExternalAbort = () => attemptController.abort();
     externalSignal?.addEventListener('abort', onExternalAbort, { once: true });
-
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    if (api.timeout > 0) {
-      timeoutId = setTimeout(() => attemptController.abort(), api.timeout * 1000);
-    }
+    const timeoutId = setTimeout(() => attemptController.abort(), TIMEOUT_SECONDS * 1000);
 
     try {
-      const result = await callSecondaryApi(messages, api, attemptController.signal);
-      return result;
+      const resp = await fetch(GENERATE_URL, {
+        method: 'POST',
+        headers: window.SillyTavern?.getContext?.()?.getRequestHeaders?.() ?? {},
+        body: JSON.stringify({
+          chat_completion_source: 'openai',
+          reverse_proxy: DEEPSEEK_BASE_URL,
+          proxy_password: key,
+          model: DEEPSEEK_MODEL,
+          messages,
+          max_tokens: MAX_TOKENS,
+          stream: false,
+          custom_include_body: JSON.stringify({ reasoning_effort: REASONING_EFFORT }),
+        }),
+        signal: attemptController.signal,
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        throw new Error(`API 请求失败 (${resp.status}): ${text.slice(0, 300)}`);
+      }
+
+      const data = await resp.json();
+      if (data?.error) throw new Error(data.error.message || 'API 返回错误');
+      return data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? '';
     } catch (e) {
       lastError = e;
 
       if (externalSignal?.aborted) throw e;
       if (!isRetryableError(e)) throw e;
 
-      if (attempt < maxAttempts - 1) {
-        toastr.info(`正在重试 (${attempt + 1}/${retryCount})...`);
+      if (attempt < RETRY_COUNT) {
+        toastr.info(`网络波动，正在重试 (${attempt + 1}/${RETRY_COUNT})...`);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } finally {
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
       externalSignal?.removeEventListener('abort', onExternalAbort);
     }
   }

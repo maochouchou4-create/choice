@@ -5,12 +5,12 @@ import { getWorldInfoPrompt, selected_world_info } from '@sillytavern/scripts/wo
 import { uuidv4 } from '@sillytavern/scripts/utils';
 import { power_user } from '@sillytavern/scripts/power-user';
 import { resolvePool } from '@/core/pool-resolver';
-import { callSecondaryApiWithRetry, type ChatMsg } from '@/core/api-client';
+import { callDeepSeekWithRetry, type ChatMsg } from '@/core/api-client';
 import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
 import { useChatSettingsStore } from '@/store/chat-settings';
 import { useGlobalSettingsStore } from '@/store/global-settings';
 import type { ChoiceGeneration } from '@/core/options-store';
-import type { PromptModule, SecondaryApi, WorldInfoGlobalSettings } from '@/type/settings';
+import type { PromptModule, WorldInfoGlobalSettings } from '@/type/settings';
 import { DEFAULT_MODULES } from '@/type/settings';
 
 export type GenerateTarget = { messageId: number; swipeId: number };
@@ -25,9 +25,6 @@ export const resolveCount = (cm: string): number => {
   const n = parseInt(cm.trim(), 10);
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
-
-export const resolveCustomApi = (id: string, apis: SecondaryApi[]): SecondaryApi | undefined =>
-  id ? apis.find(a => a.id === id) : undefined;
 
 export type Ctx = {
   count: number;
@@ -475,16 +472,15 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
     const enabledModules = [...DEFAULT_MODULES].sort((a, b) => a.order - b.order);
     const messages = await buildMessages(enabledModules, c, gwi, rules.context_rounds);
 
-    const api = resolveCustomApi(gs.settings.active_api_id, gs.settings.apis);
-    if (!api) {
-      toastr.error(t`请先在设置中配置 API（API 地址 + 模型），然后重新生成`);
+    if (!gs.settings.deepseek_key) {
+      toastr.error(t`DeepSeek key 未配置，无法生成`);
       return null;
     }
 
     genController = new AbortController();
     const signal = genController.signal;
 
-    const raw = await callSecondaryApiWithRetry(messages, api, gs.settings.retry_count, signal);
+    const raw = await callDeepSeekWithRetry(messages, signal);
     if (cancelled) return null;
     const options = parseOptions(raw, count).map(t => ({ text: t, sourceEntryId: null }));
     if (!options.length) {

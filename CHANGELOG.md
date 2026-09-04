@@ -25,6 +25,12 @@
 - 新增终选与改写规则：候选/固定条目明确为"行动意图素材须改写为成品选项"（旧版未说明改写自由度）、与固定条目语义去重、同质候选二选一
 - 写法参考 yuzuki-Memory 任务提示词的约束技巧（编号规则、失败模式逐条封堵、示例防照抄声明）；标题规范明确为 2-6 汉字动词性短语
 
+### API 层 DeepSeek 单源化（破坏性：多 API 配置弃用）
+- 删除「API」tab（ApiEditor）与多 API 配置存档（`apis[]`/`active_api_id`/`retry_count`/SecondaryApi schema）；首次启动自动从旧配置迁移 DeepSeek key 到 `deepseek_key`（存本地 extension_settings，不进 git）
+- api-client 重写为 DeepSeek 专用：固定 `api.deepseek.com` + `deepseek-v4-flash` + 非流式 + max_tokens 4096 + 超时 180s + 网络错误自动重试 1 次（硬编码）；不再发送 temperature/top_p（V4 思考模式下官方明确无效）
+- **思考强度 `reasoning_effort: "low"` 接入（默认 low，用户拍板——high 档思考过久）**；传输通道经 TauriTavern 源码核实：openai 源对该参数按 OpenAI 模型白名单静默丢弃、deepseek 源会把 low 折叠成 high，故走 `custom_include_body`（服务层在 payload 构建后无条件终合并）——这是唯一能把真实 low 送达 DeepSeek 的路径
+- 悬浮球 disabled 判定改为 key 未配置；设置 tab 减至 4 个（生成/世界书/过滤/外观）
+
 ### 条目池单源化（破坏性：池存档/配置体系弃用）
 - 条目唯一来源改为 `src/core/default-pool.ts`（`DEFAULT_MASTER_POOL`），与提示词同款"代码单源"架构——改条目＝改该文件，TT 更新即生效，无恢复按钮
 - 删除条目池整套编辑界面与数据层：条目池 tab（两处面板）、条目库/AI 生成条目/勾选条目/新建配置四个对话框、PoolConfig 配置体系与聊天/角色绑定、master_pool/configs/group_order 存档、旧三层池迁移代码（约 2200 行）

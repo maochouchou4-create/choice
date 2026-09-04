@@ -111,22 +111,6 @@ export const PromptRules = z
   .prefault({});
 export type PromptRules = z.infer<typeof PromptRules>;
 
-export const SecondaryApi = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    apiurl: z.string(),
-    key: z.string(),
-    model: z.string(),
-    temperature: z.number().min(0).max(2).default(1),
-    max_tokens: z.number().min(1).default(4096),
-    timeout: z.number().min(0).default(180),
-    stream: z.boolean().default(false),
-    exclude_params: z.string().default(''),
-  })
-  .prefault(() => ({ id: '', name: '', apiurl: '', key: '', model: '' }));
-export type SecondaryApi = z.infer<typeof SecondaryApi>;
-
 export const SCHEMA_VERSION = 20;
 
 export const WorldInfoGlobalSettings = z
@@ -173,11 +157,11 @@ export const GlobalSettings = z
     // FilterSettings 全字段带 default，{} 作为输入 parse 即得全默认对象；
     // 不能用 .default({})：zod4 的 default 参数是输出类型，要求逐字段写全
     filter_settings: FilterSettings.prefault({}),
-    apis: z.array(SecondaryApi).prefault([]),
-    active_api_id: z.string().default(''),
+    /** DeepSeek API key——唯一留存的密钥字段，存本地 extension_settings（不进 git）。
+     *  模型/地址/思考强度等均为代码级常量（src/core/api-client.ts） */
+    deepseek_key: z.string().default(''),
     world_info: WorldInfoGlobalSettings.prefault({}),
     ui: UISettings.prefault({}),
-    retry_count: z.number().min(0).max(10).default(0),
     global_count_mode: z.string().default('4'),
     auto_generate: z.boolean().default(true),
     behavior: z.enum(['send', 'fill', 'append']).default('send'),

@@ -74,7 +74,7 @@ export function useCompactLayout(target: Ref<HTMLElement | null>) {
 - **Idle**：贴边半隐藏，极慢速呼吸光晕（8s 周期，与 generating 的 3s 脉冲区分开，两套独立 keyframes）。
 - **Generating**：`generatorState.loading === true`，沿用现有脉冲动画。
 - **有新结果待查看**（新增状态）：`computed hasUnseenResult` = 最近一次 generation 完成时间戳 > 用户上次打开悬浮面板/点击气泡的时间戳。徽章弹入动效（`scale(0)→scale(1)`，`cubic-bezier(0.34, 1.56, 0.64, 1)`）。
-- **Disabled**：判断标准直接复用 `generator.ts` 里已有的校验，不新写逻辑——`resolveCustomApi(gs.settings.active_api_id, gs.settings.apis)` 解析不到（对应现有报错"请先在设置中配置 API"）。条目池已代码单源（`DEFAULT_MASTER_POOL` 非空恒成立），仅 API 未配置即 Disabled。
+- **Disabled**：判定＝`deepseek_key` 未配置（API 已 DeepSeek 单源，地址/模型为代码常量）。条目池为代码常量非空恒成立。
 
 交互：
 - 点击：有未读结果时优先展开"最近一次生成结果的快速预览"popover；无未读结果时行为不变（打开设置）。
@@ -85,9 +85,9 @@ export function useCompactLayout(target: Ref<HTMLElement | null>) {
 
 ## 目录（按实际文件结构，注意与早期规划稿的差异）
 
-- `src/core/` — `generator.ts`（单独调用API生成选项，结构化role prompt，支持取消，含 `resolveCustomApi` API 校验）、`pool-resolver.ts`（均匀随机无放回抽样，纯函数）、`options-store.ts`（`message.extra`存取，含swipe维度、翻页）、`default-pool.ts`（条目池唯一事实源）、`floating-state.ts`（悬浮球/悬浮面板共享状态）、`api-client.ts`（API 请求封装）、`panel-mount.ts`（面板挂载逻辑）、`st-character.ts`/`st-regex-source.ts`（酒馆角色卡/正则脚本读取隔离层）、`theme-detector.ts`（主题检测）、`wand-menu.ts`（魔杖菜单集成）。
+- `src/core/` — `generator.ts`（单独调用API生成选项，结构化role prompt，支持取消）、`pool-resolver.ts`（均匀随机无放回抽样，纯函数）、`options-store.ts`（`message.extra`存取，含swipe维度、翻页）、`default-pool.ts`（条目池唯一事实源）、`floating-state.ts`（悬浮球/悬浮面板共享状态）、`api-client.ts`（**DeepSeek 专用请求**：地址/模型/思考强度/max_tokens/超时/重试全为文件内常量；`reasoning_effort` 必须经 `custom_include_body` 通道发送——TT 后端对 openai 源按 OpenAI 模型白名单丢弃该参数、对 deepseek 源会把 low 折叠成 high，源码核实见文件头注释；key 读 `extension_settings.choice.deepseek_key`，本地留存不进 git）、`panel-mount.ts`（面板挂载逻辑）、`st-character.ts`/`st-regex-source.ts`（酒馆角色卡/正则脚本读取隔离层）、`theme-detector.ts`（主题检测）、`wand-menu.ts`（魔杖菜单集成）。
 - `src/store/` — `global-settings.ts`（对应`extension_settings`）、`chat-settings.ts`（对应`chat_metadata`，仅世界书排除项）、`panel-state.ts`（面板展开/折叠、当前楼层/swipe追踪）。
-- `src/components/` — 主形态 `ActionOptionsPanel.vue`；悬浮形态 `FloatingBubble.vue` + `FloatingRoot.vue` + `FloatingSettings.vue` + `FloatingContextMenu.vue`；设置区 `SettingsPanel.vue` + 5 个 tab 组件（`GenerationSettings.vue`/`ApiEditor.vue`/`WorldInfoEditor.vue`/`FilterEditor.vue`（过滤 tab 内嵌分组面板）/`AppearanceSettings.vue`，恢复出厂设置在外观页）；过滤对话框 `RegexLibraryDialog.vue`/`StRegexImportDialog.vue`/`FilterGroupPanel.vue`；通用 `ConfirmDialog.vue`/`GuidePopover.vue`；`shared/`（设计系统基础组件，见上节）。
+- `src/components/` — 主形态 `ActionOptionsPanel.vue`；悬浮形态 `FloatingBubble.vue` + `FloatingRoot.vue` + `FloatingSettings.vue` + `FloatingContextMenu.vue`；设置区 `SettingsPanel.vue` + 4 个 tab 组件（`GenerationSettings.vue`/`WorldInfoEditor.vue`/`FilterEditor.vue`（过滤 tab 内嵌分组面板）/`AppearanceSettings.vue`，恢复出厂设置在外观页）；过滤对话框 `RegexLibraryDialog.vue`/`StRegexImportDialog.vue`/`FilterGroupPanel.vue`；通用 `ConfirmDialog.vue`/`GuidePopover.vue`；`shared/`（设计系统基础组件，见上节）。
 - `docs/` — 技术方案文档（`async-action-options-spec.md`）与早期MVP原型，作为背景参考，不是当前实现标准；UI 重构方案见另外维护的 `choice-ui-redesign-spec.md`（主体页面）与 `choice-floating-bubble-design.md`（悬浮球专项），本文件是二者的执行摘要，细节推理以那两份为准。
 
 ## 条目池模型 & 抽取算法要点

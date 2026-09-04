@@ -56,7 +56,6 @@
           </GuidePopover>
 
           <GenerationSettings v-if="activeTab === 'generation'" />
-          <ApiEditor v-else-if="activeTab === 'api'" />
           <WorldInfoEditor v-else-if="activeTab === 'worldinfo'" />
           <FilterEditor v-else-if="activeTab === 'filter'" />
           <AppearanceSettings v-else-if="activeTab === 'appearance'" />
@@ -71,7 +70,6 @@
 </template>
 
 <script setup lang="ts">
-import ApiEditor from '@/components/ApiEditor.vue';
 import AppearanceSettings from '@/components/AppearanceSettings.vue';
 import GenerationSettings from '@/components/GenerationSettings.vue';
 import FilterEditor from '@/components/FilterEditor.vue';

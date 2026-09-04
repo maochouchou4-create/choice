@@ -34,8 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { generatorState, resolveCustomApi } from '@/core/generator';
-import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
+import { generatorState } from '@/core/generator';
 import { useGlobalSettingsStore } from '@/store/global-settings';
 import { openSettings, isBubbleContextMenuOpen, bubbleX, bubbleY } from '@/core/floating-state';
 import FloatingContextMenu from '@/components/FloatingContextMenu.vue';
@@ -54,10 +53,11 @@ const posY = useStorage(STORAGE_KEY_Y, window.innerHeight - BUBBLE_SIZE - 80);
 const isSnappedLeft = ref(false);
 const isSnappedRight = ref(false);
 
+// API 已 DeepSeek 单源（地址/模型为代码常量），disabled 只剩 key 未配置一种；
+// 条目池为代码常量非空恒成立
 const isDisabled = computed(() => {
   const gs = useGlobalSettingsStore();
-  const api = resolveCustomApi(gs.settings.active_api_id, gs.settings.apis);
-  return !api || DEFAULT_MASTER_POOL.length === 0;
+  return !gs.settings.deepseek_key;
 });
 
 const bubbleState = computed(() => {

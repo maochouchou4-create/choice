@@ -1,4 +1,4 @@
-export type TabId = 'generation' | 'api' | 'worldinfo' | 'filter' | 'appearance';
+export type TabId = 'generation' | 'worldinfo' | 'filter' | 'appearance';
 
 export interface TabDefinition {
   id: TabId;
@@ -14,7 +14,6 @@ export interface GuideContent {
 
 export const INLINE_TABS: TabDefinition[] = [
   { id: 'generation', label: '生成', icon: 'fa-solid fa-bolt' },
-  { id: 'api', label: 'API', icon: 'fa-solid fa-plug' },
   { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
   { id: 'filter', label: '过滤', icon: 'fa-solid fa-filter' },
   { id: 'appearance', label: '外观', icon: 'fa-solid fa-palette' },
@@ -22,7 +21,6 @@ export const INLINE_TABS: TabDefinition[] = [
 
 export const FLOATING_TABS: TabDefinition[] = [
   { id: 'generation', label: '生成', icon: 'fa-solid fa-bolt' },
-  { id: 'api', label: 'API', icon: 'fa-solid fa-plug' },
   { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
   { id: 'filter', label: '过滤', icon: 'fa-solid fa-filter' },
   { id: 'appearance', label: '外观', icon: 'fa-solid fa-palette' },
@@ -38,14 +36,6 @@ export const GUIDE_CONTENTS: Record<TabId, GuideContent> = {
 <p><strong>上下文范围</strong>：控制发送给 AI 的聊天记录——"轮数模式"取最后 N 轮（含隐藏消息），"仅可见消息"不限轮数、排除隐藏消息。</p>
 <p><strong>预填充</strong>：在消息末尾预写 AI 开头以引导输出格式，不支持的模型可关闭。</p>
 <p><strong>提示</strong>：在选项面板的头部，也可以直接切换发送/覆盖/尾附模式，两处设置保持同步。</p>`,
-  },
-  api: {
-    icon: 'fa-solid fa-plug',
-    title: 'API 配置',
-    html: `<p><strong>用途</strong>：配置生成行动选项所用的 AI 接口。支持多个 API 配置，通过下拉框切换。</p>
-<p><strong>字段说明</strong>：API 地址填 OpenAI 兼容接口（如 <code>https://api.openai.com/v1/chat/completions</code>），密钥为 API Key，模型名称需与接口支持的模型名一致。</p>
-<p><strong>拉取模型</strong>：填写 API 地址后点击"拉取"按钮，自动从接口获取可用模型列表，点击即可选中。</p>
-<p style="color:#e07070"><strong>⚠️ 修改后必须点击保存按钮才会持久化</strong>，切换页面或关闭窗口不会自动保存。</p>`,
   },
   worldinfo: {
     icon: 'fa-solid fa-book',

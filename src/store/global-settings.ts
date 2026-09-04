@@ -22,8 +22,18 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
   // 迁移逻辑处理的是未经 Zod 验证的旧存档，字段形态不可知，显式 any；
   // 且 extension_settings 的类型声明不含 choice 命名空间键，_.get 会推断成 undefined/never
   const existing = _.get(extension_settings, setting_field) as any;
+  // 旧 apis[]（API 编辑界面时代的多 API 配置）已被 schema 剥离，key 必须在剥离前抢救：
+  // 迁移到新家 deepseek_key（DeepSeek 单源化后唯一留存的密钥字段），优先取 deepseek 地址的配置
+  const legacyApis: any[] = _.get(existing, 'apis', []) ?? [];
+  const legacyDeepseekKey =
+    legacyApis.find((a: any) => String(a?.apiurl ?? '').includes('deepseek'))?.key ??
+    legacyApis.find((a: any) => String(a?.key ?? ''))?.key ??
+    '';
 
   const validated = validateInplace(GlobalSettings, existing);
+  if (!validated.deepseek_key && legacyDeepseekKey) {
+    validated.deepseek_key = String(legacyDeepseekKey);
+  }
 
   const needsMigration = (validated.schema_version ?? 0) < SCHEMA_VERSION;
   if (needsMigration) {
