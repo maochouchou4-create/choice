@@ -25,7 +25,6 @@ export const PromptModule = z.object({
   name: z.string(),
   role: z.enum(['system', 'user', 'assistant']),
   content: z.string().default(''),
-  marker: z.boolean(),
   system: z.boolean(),
   enabled: z.boolean().default(true),
   order: z.number().min(0),
@@ -117,10 +116,6 @@ export const WorldInfoGlobalSettings = z
   .object({
     enabled: z.boolean().default(true),
     global_excluded_books: z.array(z.string()).prefault([]),
-    /** @deprecated 已改用 ST 原生 getWorldInfoPrompt，不再区分 redlight 模式 */
-    redlight_mode: z.boolean().default(true),
-    /** @deprecated 已改用 ST 原生 getWorldInfoPrompt，不再支持 EJS 模板 */
-    ejs_compat: z.boolean().default(false),
   })
   .prefault({});
 export type WorldInfoGlobalSettings = z.infer<typeof WorldInfoGlobalSettings>;
@@ -165,7 +160,6 @@ export const GlobalSettings = z
     global_count_mode: z.string().default('4'),
     auto_generate: z.boolean().default(true),
     behavior: z.enum(['send', 'fill', 'append']).default('send'),
-    empty_groups: z.array(z.string()).default([]),
   })
   .prefault({});
 export type GlobalSettings = z.infer<typeof GlobalSettings>;
