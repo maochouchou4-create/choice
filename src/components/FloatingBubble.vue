@@ -29,15 +29,13 @@
       ></i>
       <i v-if="bubbleState === 'disabled'" class="fa-solid fa-exclamation choice-bubble-disabled-badge"></i>
     </div>
-    <FloatingContextMenu v-if="isBubbleContextMenuOpen" />
   </Teleport>
 </template>
 
 <script setup lang="ts">
 import { generatorState } from '@/core/generator';
 import { useGlobalSettingsStore } from '@/store/global-settings';
-import { openSettings, isBubbleContextMenuOpen, bubbleX, bubbleY } from '@/core/floating-state';
-import FloatingContextMenu from '@/components/FloatingContextMenu.vue';
+import { openSettings } from '@/core/floating-state';
 
 const BUBBLE_SIZE = 60;
 const SNAP_EXPOSED = 40;
@@ -80,9 +78,6 @@ const clearPressed = () => {
 };
 
 const handleClick = () => {
-  isBubbleContextMenuOpen.value = false;
-  bubbleX.value = posX.value;
-  bubbleY.value = posY.value;
   openSettings();
 };
 
@@ -117,56 +112,30 @@ const { x, y, isDragging } = useDraggable(bubbleEl, {
     x.value = snappedX;
     y.value = posY.value;
 
-    bubbleX.value = snappedX;
-    bubbleY.value = posY.value;
-
     if (dx < 3 && dy < 3) {
-      if (!longPressTriggered) {
-        handleClick();
-      }
-      longPressTriggered = false;
+      handleClick();
     }
     // 点击/拖拽收尾后延迟清除按压态：此时 hover 已接管弹出位移，切换无跳变
     setTimeout(clearPressed, 250);
   },
 });
 
-let longPressTimer: ReturnType<typeof setTimeout> | null = null;
-let longPressTriggered = false;
 let pointerDownPos = { x: 0, y: 0 };
 
 const onPointerDown = (e: PointerEvent) => {
-  longPressTriggered = false;
   pointerDownPos = { x: e.clientX, y: e.clientY };
   // 按下即记录贴边方向：贴边球在 isDragging 摘类的瞬间由 pressed 类接管相同位移
   pressSide.value = isSnappedLeft.value ? 'left' : isSnappedRight.value ? 'right' : null;
   isPressed.value = true;
-  longPressTimer = setTimeout(() => {
-    longPressTriggered = true;
-    clearPressed();
-    bubbleX.value = posX.value;
-    bubbleY.value = posY.value;
-    isBubbleContextMenuOpen.value = true;
-  }, 500);
 };
 
 const onPointerMove = (e: PointerEvent) => {
-  if (longPressTimer !== null) {
-    const dx = Math.abs(e.clientX - pointerDownPos.x);
-    const dy = Math.abs(e.clientY - pointerDownPos.y);
-    if (dx > 5 || dy > 5) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-      // 位移超过阈值即转入拖拽意图，撤销按压位移补偿，让球跟手
-      clearPressed();
-    }
-  }
-};
-
-const onPointerUp = () => {
-  if (longPressTimer !== null) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
+  if (!isPressed.value) return;
+  const dx = Math.abs(e.clientX - pointerDownPos.x);
+  const dy = Math.abs(e.clientY - pointerDownPos.y);
+  if (dx > 5 || dy > 5) {
+    // 位移超过阈值即转入拖拽意图，撤销按压位移补偿，让球跟手
+    clearPressed();
   }
 };
 
@@ -179,8 +148,6 @@ watch(
     isSnappedRight.value =
       centerX >= window.innerWidth / 2 &&
       (val === window.innerWidth - BUBBLE_SIZE + SNAP_OFFSET || val >= window.innerWidth - BUBBLE_SIZE);
-    bubbleX.value = val;
-    bubbleY.value = posY.value;
   },
   { immediate: true },
 );
@@ -202,8 +169,6 @@ const handleResize = () => {
   posY.value = clampedY;
   x.value = clampedX;
   y.value = clampedY;
-  bubbleX.value = clampedX;
-  bubbleY.value = clampedY;
 
   if (resizeTimer !== null) clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
@@ -215,16 +180,13 @@ const handleResize = () => {
 onMounted(() => {
   bubbleEl.value?.addEventListener('pointerdown', onPointerDown);
   bubbleEl.value?.addEventListener('pointermove', onPointerMove);
-  bubbleEl.value?.addEventListener('pointerup', onPointerUp);
   window.addEventListener('resize', handleResize);
 });
 onUnmounted(() => {
   bubbleEl.value?.removeEventListener('pointerdown', onPointerDown);
   bubbleEl.value?.removeEventListener('pointermove', onPointerMove);
-  bubbleEl.value?.removeEventListener('pointerup', onPointerUp);
   window.removeEventListener('resize', handleResize);
   if (resizeTimer !== null) clearTimeout(resizeTimer);
-  if (longPressTimer !== null) clearTimeout(longPressTimer);
 });
 </script>
 

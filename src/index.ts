@@ -2,7 +2,6 @@ import toastr from 'toastr';
 import '@/theme.css';
 import '@/global.css';
 import { initPanelMount } from '@/core/panel-mount';
-import { initWandMenu } from '@/core/wand-menu';
 import { pinia } from '@/pinia';
 import { useChatSettingsStore } from '@/store/chat-settings';
 import { eventSource, event_types } from '@sillytavern/scripts/events';
@@ -31,7 +30,6 @@ $(() => {
     });
 
     initFloatingApp();
-    initWandMenu();
     initPanelMount();
   } catch (error) {
     console.error('[Choice] init failed', error);
