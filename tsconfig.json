@@ -7,7 +7,7 @@
     // 命中本仓库的 src/pinia.ts 而不是 node_modules 的 pinia 包，
     // 导致 import { defineStore } from 'pinia' 报 TS2305、全部 store 实例类型退化为 any
     // （auto-imports.d.ts 的 @ts-nocheck 掩盖了这条链路的报错）。
-    "types": ["jquery", "jqueryui", "lodash", "toastr", "type-fest"],
+    "types": ["jquery", "jqueryui", "lodash", "toastr"],
     "paths": {
       "@sillytavern/*": ["./../../../../*"],
       "@/*": ["./src/*"]
