@@ -12,13 +12,6 @@ export interface GuideContent {
   html: string;
 }
 
-export const INLINE_TABS: TabDefinition[] = [
-  { id: 'generation', label: '生成', icon: 'fa-solid fa-bolt' },
-  { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
-  { id: 'filter', label: '过滤', icon: 'fa-solid fa-filter' },
-  { id: 'appearance', label: '外观', icon: 'fa-solid fa-palette' },
-];
-
 export const FLOATING_TABS: TabDefinition[] = [
   { id: 'generation', label: '生成', icon: 'fa-solid fa-bolt' },
   { id: 'worldinfo', label: '世界书', icon: 'fa-solid fa-book' },
