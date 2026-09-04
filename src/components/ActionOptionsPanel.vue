@@ -153,7 +153,7 @@ const onNext = () => {
   panelStore.goTo(panelStore.currentIndex + 1);
 };
 
-// 分隔符：半角/全角冒号后跟任意空白字符，与 generator.ts 的 parseOptions 正则保持一致
+// 分隔符：半角/全角冒号后跟任意空白字符，与 options-parse.ts 的 parseOptions 正则保持一致
 const OPTION_SEP_RE = /[:：]\s/;
 
 // 匹配开头的 [标题] 或 【标题】 模式，标题为括号内文字，括号后紧跟内容
