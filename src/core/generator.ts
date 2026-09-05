@@ -12,7 +12,7 @@ import { useChatSettingsStore } from '@/store/chat-settings';
 import { useGlobalSettingsStore } from '@/store/global-settings';
 import type { ChoiceGeneration } from '@/core/options-store';
 import type { WorldInfoGlobalSettings } from '@/type/settings';
-import { ASSISTANT_ACK, ASSISTANT_THINKING, SYSTEM_RULES, THINKING_GUIDE, USER_TASK } from '@/core/default-prompt';
+import { ASSISTANT_ACK, SYSTEM_RULES, USER_TASK } from '@/core/default-prompt';
 
 export type GenerateTarget = { messageId: number; swipeId: number };
 
@@ -46,9 +46,10 @@ const sub = (t: string, c: Ctx) =>
     .replaceAll('{{max_chars}}', String(c.maxChars))
     .replaceAll('{{option_person}}', c.optionPerson);
 
-/** 消息组装（线性直写，取代旧 18 模块配方）：
+/** 消息组装（线性直写）：
  *  system 规则正文 → [prefill] assistant 确认 → system <reference> 人设资料 →
- *  system <history> 包裹的交互历史 → user 本轮任务+思考框架 → [prefill] assistant 思考开头 */
+ *  system <history> 包裹的交互历史 → user 本轮任务。
+ *  ⚠ 消息序列末尾不得以未闭合标签结尾：思考模型（DeepSeek V4）会把它判为思维链续写、正文为空 */
 export const buildMessages = async (
   ctx: Ctx,
   wi: WorldInfoGlobalSettings,
@@ -66,8 +67,8 @@ export const buildMessages = async (
   const fill = (tpl: string) => substituteParams(sub(tpl, augmentedCtx));
   const msgs: ChatMsg[] = [];
 
-  // 1. system：规则正文一整块；预填充关闭时没有 assistant <thinking> 开头，思考框架并入规则尾部
-  msgs.push({ role: 'system', content: fill(prefillEnabled ? SYSTEM_RULES : `${SYSTEM_RULES}\n\n${THINKING_GUIDE}`) });
+  // 1. system：规则正文一整块
+  msgs.push({ role: 'system', content: fill(SYSTEM_RULES) });
 
   // 2. assistant 确认（仅预填充开启）
   if (prefillEnabled) msgs.push({ role: 'assistant', content: ASSISTANT_ACK });
@@ -111,13 +112,10 @@ export const buildMessages = async (
     msgs.push({ role: 'system', content: '</history>' });
   }
 
-  // 5. user：本轮任务 + 思考框架（合并相邻逻辑保证其前是 history 的 </history>，不合并）
-  msgs.push({ role: 'user', content: fill(`${USER_TASK}\n\n${THINKING_GUIDE}`) });
+  // 5. user：本轮任务（消息序列的最后一条，不得以未闭合标签结尾）
+  msgs.push({ role: 'user', content: fill(USER_TASK) });
 
-  // 6. assistant 思考开头（仅预填充开启，必须为最后一条）
-  if (prefillEnabled) msgs.push({ role: 'assistant', content: ASSISTANT_THINKING });
-
-  // 合并相邻同 role 消息（2 与 3、4 内部与 5 之间的相邻 system）
+  // 合并相邻同 role 消息（2 与 3、4 内部之间的相邻 system）
   const merged: ChatMsg[] = [];
   for (const msg of msgs) {
     const last = merged[merged.length - 1];
@@ -335,6 +333,8 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
     if (cancelled) return null;
     const options = parseOptions(raw, count).map(t => ({ text: t, sourceEntryId: null }));
     if (!options.length) {
+      // 排错主通道：原始输出打进 console，经 TT 前端日志桥（3p:choice 前缀）可查
+      console.warn('[Choice] 解析失败，模型原始输出:', raw);
       toastr.error(t`未能解析出任何选项,请检查模型输出`);
       return null;
     }
