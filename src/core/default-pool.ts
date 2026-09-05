@@ -106,7 +106,7 @@ export const DEFAULT_MASTER_POOL: PoolEntry[] = [
   { id: 'lens-01', type: '用手边的东西', content: '摆弄、使用眼前的物品，让手上有戏', rule: '', pinned: false, category: '环境与镜头' },
   { id: 'lens-02', type: '借物传意', content: '借一件物品把心意递过去——递杯热饮、把伞倾向对方', rule: '', pinned: false, category: '环境与镜头' },
   { id: 'lens-03', type: '换个位置', content: '从当前位置挪去别处——窗边、门外、离对方更近的地方', rule: '', pinned: false, category: '环境与镜头' },
-  { id: 'lens-04', type: '他人视角', content: '以另一位在场角色的视角，写一段此刻的画面', rule: '全池唯一特殊主语条目：主语不是 user，以该角色的视角写其能看到、感知到的内容，不得泄露其视角之外的信息', pinned: false, category: '环境与镜头' },
+  { id: 'lens-04', type: '他人视角', content: '以另一位在场角色的视角，写一段此刻的画面', rule: '镜头型条目而非某角色的行动：选定一位在场角色，以TA的视角写其能看到、感知到的内容，不得泄露TA视角之外的信息', pinned: false, category: '环境与镜头' },
   { id: 'lens-05', type: '退到一旁', content: '从互动中退出来，在一旁安静地看着', rule: '', pinned: false, category: '环境与镜头' },
   { id: 'lens-06', type: '慢下来感受', content: '放慢节奏，用感官细写此刻的声音、气味与温度', rule: '', pinned: false, category: '环境与镜头' },
   { id: 'lens-07', type: '抽离回望', content: '从当下抽离一瞬，回望这段关系或这一天', rule: '', pinned: false, category: '环境与镜头' },
