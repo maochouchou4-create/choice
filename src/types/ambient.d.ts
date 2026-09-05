@@ -27,13 +27,10 @@ declare global {
   }
 
   /**
-   * ST 原生楼层消息（SillyTavern/public/script.js 中 chat[] 的元素）。
-   * 注意与 @types/function/chat_message.d.ts 的 ChatMessage（TavernHelper 子集，字段为
-   * message/message_id/role）是两个东西：本仓库里从 @sillytavern/script 导入的 chat[]
-   * 实际元素是这里的 ST 原生结构，访问 mes/is_user/is_system/swipe_id 等字段时必须
-   * 用本类型断言，不要凭 TavernHelper 子集类型猜字段名。
-   * 字段清单已核对酒馆 public/global.d.ts 的 interface ChatMessage 与
-   * @types/iframe/exported.sillytavern.d.ts 的 SillyTavern.ChatMessage，二者一致。
+   * ST 原生楼层消息（酒馆源码 public/script.js 中 chat[] 的元素）。
+   * 注意酒馆助手（TavernHelper）的 ChatMessage 是字段不同的一套（message/message_id/role）：
+   * 本仓库里从 @sillytavern/script 导入的 chat[] 实际元素是这里的 ST 原生结构，访问
+   * mes/is_user/is_system/swipe_id 等字段时必须用本类型断言，不要按酒馆助手的字段名猜。
    */
   type StChatMessage = {
     name?: string;
@@ -54,11 +51,9 @@ declare global {
   };
 
   /**
-   * ST 原生角色卡对象（SillyTavern/public/script.js 中 characters[] 的元素）。
-   * 注意与 @types/function/character.d.ts 的全局 Character（TavernHelper 子集，扁平字段
-   * description/first_messages，无 data）不是同一个东西：扩展代码访问 ch.data.description
-   * 这类 V2 卡字段时必须用本类型。字段清单已核对酒馆 public/scripts/char-data.js 的
-   * v1CharData/v2CharData typedef 与 public/global.d.ts 的 Character 引用。
+   * ST 原生角色卡对象（酒馆源码 public/script.js 中 characters[] 的元素）。
+   * 注意酒馆助手（TavernHelper）的全局 Character 是扁平字段的一套（description/first_messages，
+   * 无 data）：扩展代码访问 ch.data.description 这类 V2 卡字段时必须用本类型。
    */
   type StCharacter = {
     name?: string;

@@ -30,7 +30,6 @@ SillyTavern 第三方扩展（基于 `tavern_extension_template` 二次开发）
 - `src/store/` — `global-settings.ts`（对应 `extension_settings.choice`，含旧 apis[] 的 key 抢救迁移）、`chat-settings.ts`（对应 `chat_metadata`，仅世界书排除项）、`panel-state.ts`（面板展开/当前楼层/swipe 追踪）。
 - `src/components/` — 选项面板 `ActionOptionsPanel.vue`；悬浮形态 `FloatingBubble.vue`（交互入口唯一：单击开设置+拖拽贴边）+ `FloatingRoot.vue` + `FloatingSettings.vue`；设置 tab 组件 `GenerationSettings.vue`/`WorldInfoEditor.vue`/`FilterEditor.vue`（内嵌 `FilterGroupPanel.vue`）/`AppearanceSettings.vue`（含恢复出厂）；对话框 `RegexLibraryDialog.vue`/`StRegexImportDialog.vue`/`ConfirmDialog.vue`；`GuidePopover.vue`；`shared/tab-definitions.ts`（tab 清单+指南 HTML）。
 - `tests/` — vitest：`pool-resolver.test.ts`（分层抽取 9 例）、`options-parse.test.ts`（解析 14 例）。`tsconfig.json` include 已覆盖 tests。
-- `@types/` — 上游搬来的 TavernHelper/酒馆 API 类型声明（30 个文件，字典书，拍板不拆不砍）。
 
 ## 条目池模型 & 抽取算法
 
