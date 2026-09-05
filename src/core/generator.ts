@@ -11,8 +11,8 @@ import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
 import { useChatSettingsStore } from '@/store/chat-settings';
 import { useGlobalSettingsStore } from '@/store/global-settings';
 import type { ChoiceGeneration } from '@/core/options-store';
-import type { PromptModule, WorldInfoGlobalSettings } from '@/type/settings';
-import { DEFAULT_MODULES } from '@/type/settings';
+import type { WorldInfoGlobalSettings } from '@/type/settings';
+import { ASSISTANT_ACK, ASSISTANT_THINKING, SYSTEM_RULES, THINKING_GUIDE, USER_TASK } from '@/core/default-prompt';
 
 export type GenerateTarget = { messageId: number; swipeId: number };
 
@@ -30,7 +30,6 @@ export type Ctx = {
   pickCount: number;
   pinned: string;
   poolSelected: string;
-  input: string;
   minChars: number;
   maxChars: number;
   optionPerson: string;
@@ -41,16 +40,16 @@ const sub = (t: string, c: Ctx) =>
     .replaceAll('{{pinned_count}}', String(c.pinnedCount))
     .replaceAll('{{candidate_count}}', String(c.candidateCount))
     .replaceAll('{{pick_count}}', String(c.pickCount))
-    .replaceAll('{{count_minus_1}}', String(Math.max(0, c.count - 1)))
     .replaceAll('{{pinned}}', c.pinned)
     .replaceAll('{{pool_selected}}', c.poolSelected)
-    .replaceAll('{{input}}', c.input)
     .replaceAll('{{min_chars}}', String(c.minChars))
     .replaceAll('{{max_chars}}', String(c.maxChars))
     .replaceAll('{{option_person}}', c.optionPerson);
 
+/** 消息组装（线性直写，取代旧 18 模块配方）：
+ *  system 规则正文 → [prefill] assistant 确认 → system <reference> 人设资料 →
+ *  system <history> 包裹的交互历史 → user 本轮任务+思考框架 → [prefill] assistant 思考开头 */
 export const buildMessages = async (
-  modules: PromptModule[],
   ctx: Ctx,
   wi: WorldInfoGlobalSettings,
   contextRounds: number,
@@ -64,95 +63,61 @@ export const buildMessages = async (
     maxChars: pr.option_max_chars,
     optionPerson: pr.option_person || '第三人称',
   };
+  const fill = (tpl: string) => substituteParams(sub(tpl, augmentedCtx));
   const msgs: ChatMsg[] = [];
+
+  // 1. system：规则正文一整块；预填充关闭时没有 assistant <thinking> 开头，思考框架并入规则尾部
+  msgs.push({ role: 'system', content: fill(prefillEnabled ? SYSTEM_RULES : `${SYSTEM_RULES}\n\n${THINKING_GUIDE}`) });
+
+  // 2. assistant 确认（仅预填充开启）
+  if (prefillEnabled) msgs.push({ role: 'assistant', content: ASSISTANT_ACK });
+
+  // 3. system：<reference> 人设参考资料（user persona / 世界书 / 角色卡三件套）
+  const refParts: string[] = [];
+  const personaDesc = power_user?.persona_description;
+  if (personaDesc) {
+    refParts.push(
+      `<user_persona>\n以下是用户本人（用户=主角=user）的人物设定：\n${substituteParams(personaDesc)}\n</user_persona>`,
+    );
+  }
   const wiBuckets = wi.enabled ? await buildWI() : null;
-
-  const sorted = [...modules].sort((a, b) => a.order - b.order);
-
-  for (const mod of sorted) {
-    if (!mod.enabled) continue;
-    if (!prefillEnabled && mod.role === 'assistant') continue;
-
-    switch (mod.id) {
-      case 'system_prompt': {
-        const content = substituteParams(sub(mod.content, augmentedCtx));
-        if (content) msgs.push({ role: mod.role, content });
-        break;
-      }
-      case 'world_info_before': {
-        if (wiBuckets) {
-          const merged = [wiBuckets.before, wiBuckets.anBefore, wiBuckets.em].filter(Boolean).join('\n\n');
-          if (merged) msgs.push({ role: 'system', content: merged });
-        }
-        break;
-      }
-      case 'persona_description': {
-        const personaDesc = power_user?.persona_description;
-        if (personaDesc) {
-          msgs.push({
-            role: 'system',
-            content: `<user_persona>\n以下是用户本人（用户=主角=user）的人物设定：\n${substituteParams(personaDesc)}\n</user_persona>`,
-          });
-        }
-        break;
-      }
-      case 'char_description': {
-        const ch = getStCharacter(this_chid);
-        const desc = ch?.data?.description;
-        if (desc) msgs.push({ role: 'system', content: substituteParams(desc) });
-        break;
-      }
-      case 'char_personality': {
-        const ch = getStCharacter(this_chid);
-        const personality = ch?.data?.personality;
-        if (personality) msgs.push({ role: 'system', content: substituteParams(personality) });
-        break;
-      }
-      case 'char_scenario': {
-        const ch = getStCharacter(this_chid);
-        const scenario = ch?.data?.scenario;
-        if (scenario) msgs.push({ role: 'system', content: substituteParams(scenario) });
-        break;
-      }
-      case 'world_info_after': {
-        if (wiBuckets) {
-          const merged = [wiBuckets.after, wiBuckets.anAfter, wiBuckets.atDepth].filter(Boolean).join('\n\n');
-          if (merged) msgs.push({ role: 'system', content: merged });
-        }
-        break;
-      }
-      case 'chat_history': {
-        const history = buildChatHistory(contextRounds);
-        for (const m of history) {
-          msgs.push(prefillEnabled ? m : { ...m, role: 'system' });
-        }
-        break;
-      }
-      case 'user_instruction': {
-        const content = sub(mod.content, augmentedCtx);
-        if (content) msgs.push({ role: mod.role, content });
-        break;
-      }
-      case 'thinking_prompt': {
-        const content = substituteParams(sub(mod.content, augmentedCtx));
-        if (content) msgs.push({ role: mod.role, content });
-        break;
-      }
-      case 'assistant_ack':
-      case 'assistant_thinking': {
-        const content = mod.content;
-        if (content) msgs.push({ role: mod.role, content });
-        break;
-      }
-      default: {
-        const content = substituteParams(sub(mod.content, augmentedCtx));
-        if (content) msgs.push({ role: mod.role, content });
-        break;
-      }
-    }
+  if (wiBuckets) {
+    const before = [wiBuckets.before, wiBuckets.anBefore, wiBuckets.em].filter(Boolean).join('\n\n');
+    if (before) refParts.push(before);
+  }
+  const ch = getStCharacter(this_chid);
+  for (const part of [ch?.data?.description, ch?.data?.personality, ch?.data?.scenario]) {
+    if (part) refParts.push(substituteParams(part));
+  }
+  if (wiBuckets) {
+    const after = [wiBuckets.after, wiBuckets.anAfter, wiBuckets.atDepth].filter(Boolean).join('\n\n');
+    if (after) refParts.push(after);
+  }
+  if (refParts.length) {
+    msgs.push({
+      role: 'system',
+      content: '<!-- 角色扮演参考资料 -->\n<reference>\n' + refParts.join('\n\n') + '\n</reference>',
+    });
   }
 
-  // 合并相邻同 role 消息，避免连续多个 system/user/assistant
+  // 4. system：<history> 包裹的交互历史（历史本体保持 user/assistant 交替，供模型识别对话结构）
+  const history = buildChatHistory(contextRounds);
+  if (history.length) {
+    msgs.push({
+      role: 'system',
+      content: '<!-- 角色扮演交互历史，最新一条为 <current_scene> 标记的当前场景 -->\n<history>',
+    });
+    for (const m of history) msgs.push(prefillEnabled ? m : { ...m, role: 'system' });
+    msgs.push({ role: 'system', content: '</history>' });
+  }
+
+  // 5. user：本轮任务 + 思考框架（合并相邻逻辑保证其前是 history 的 </history>，不合并）
+  msgs.push({ role: 'user', content: fill(`${USER_TASK}\n\n${THINKING_GUIDE}`) });
+
+  // 6. assistant 思考开头（仅预填充开启，必须为最后一条）
+  if (prefillEnabled) msgs.push({ role: 'assistant', content: ASSISTANT_THINKING });
+
+  // 合并相邻同 role 消息（2 与 3、4 内部与 5 之间的相邻 system）
   const merged: ChatMsg[] = [];
   for (const msg of msgs) {
     const last = merged[merged.length - 1];
@@ -350,16 +315,13 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
         })
         .join('\n'),
       poolSelected: poolSelectedText || '无',
-      input: '',
       minChars: 30,
       maxChars: 80,
       optionPerson: '第三人称',
     };
     const rules = gs.settings.prompt_rules;
 
-    // 提示词模块唯一来源是 default-prompt-modules.json（代码级，无存档无 UI 编辑）
-    const enabledModules = [...DEFAULT_MODULES].sort((a, b) => a.order - b.order);
-    const messages = await buildMessages(enabledModules, c, gwi, rules.context_rounds);
+    const messages = await buildMessages(c, gwi, rules.context_rounds);
 
     if (!gs.settings.deepseek_key) {
       toastr.error(t`DeepSeek key 未配置，无法生成`);

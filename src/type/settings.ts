@@ -1,4 +1,3 @@
-import defaultModulesJson from '../../default-prompt-modules.json';
 // 显式导入 z：auto-imports.d.ts 生成的全局 const z（typeof import('zod').z）在类型位置
 // 无法当命名空间用（z.infer 报 TS2503，且该文件被 gitignore 随时重生成），不能用
 import { z } from 'zod';
@@ -18,21 +17,6 @@ export const PoolEntry = z
   // 空对象不满足签名；占位值仅在输入为 undefined 的极端路径触发，正常条目不受影响
   .prefault(() => ({ id: '', type: '' }));
 export type PoolEntry = z.infer<typeof PoolEntry>;
-
-export const PromptModule = z.object({
-  id: z.string(),
-  name: z.string(),
-  role: z.enum(['system', 'user', 'assistant']),
-  content: z.string().default(''),
-  system: z.boolean(),
-  enabled: z.boolean().default(true),
-  order: z.number().min(0),
-});
-export type PromptModule = z.infer<typeof PromptModule>;
-
-// JSON 导入的 role 推断为 string，与 PromptModule 的字面量联合不兼容；内容受构建期 JSON 约束，
-// 此处断言安全（若 JSON 里 role 拼错，运行时由 zod 解析/生成流程兜底）
-export const DEFAULT_MODULES = defaultModulesJson.modules as unknown as PromptModule[];
 
 // 聊天记录过滤规则：标签匹配（字面量头/尾）或正则匹配，二者可混用
 export const ChatFilterRule = z.discriminatedUnion('type', [
@@ -89,7 +73,7 @@ export const FilterSettings = z.object({
 });
 export type FilterSettings = z.infer<typeof FilterSettings>;
 
-/** 提示词模块的代码级参数：模块正文唯一来源是 default-prompt-modules.json（无 UI 编辑），
+/** 提示词的代码级参数：提示词正文唯一来源是 src/core/default-prompt.ts（无 UI 编辑），
  *  这里只存运行时可调的组装开关与选项约束。字段名 prompt_rules 沿用历史存档键，
  *  改名会无谓丢掉用户已调好的值。 */
 export const PromptRules = z
