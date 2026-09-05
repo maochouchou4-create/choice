@@ -18,9 +18,12 @@ const GENERATE_URL = '/api/backends/chat-completions/generate';
  *  - 非流式：弱网下流式断流（body_interrupted）面更大，整响应一次拿更稳。 */
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
 const DEEPSEEK_MODEL = 'deepseek-v4-flash';
+/** 官方档位映射（thinking_mode 指南核实）：low→low，medium/high/xhigh→high，max→max；
+ *  思考强度唯一可靠闸门＝此参数，必须走 custom_include_body 通道发真值 */
 const REASONING_EFFORT = 'low';
-/** 思考+正文共享此额度：2026-09-05 实案＝思维链 6570 字把 4096 额度耗尽，
- *  finish_reason=length、正文 0 字（"未能解析出任何选项"）；16k 给思考失控留足余量 */
+/** 思考+正文共享此额度（官方未文档化思维链是否计入，但 2026-09-05 实案证实计入：
+ *  思维链 6570 字即耗尽 4096，finish_reason=length、正文 0 字）。官方上限 384K，
+ *  此处 16k 远未到顶，仅为正文永不被思考截断的保险值 */
 const MAX_TOKENS = 16384;
 const TIMEOUT_SECONDS = 180;
 /** 网络类错误自动重试次数（治弱网抖动），硬编码不设 UI */
