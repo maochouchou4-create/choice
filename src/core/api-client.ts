@@ -26,13 +26,19 @@ const REASONING_EFFORT = 'low';
  *  此处 16k 远未到顶，仅为正文永不被思考截断的保险值 */
 const MAX_TOKENS = 16384;
 const TIMEOUT_SECONDS = 180;
-/** 网络类错误自动重试次数（治弱网抖动），硬编码不设 UI */
-const RETRY_COUNT = 1;
+/** 网络类错误自动重试次数（治弱网抖动+空正文），硬编码不设 UI */
+const RETRY_COUNT = 2;
 
-/** 判断错误是否可重试：网络错误（TypeError）和 5xx 可重试；
+/** 模型返回 stop 但正文为空——V4 思考模型偶发把全部输出写进思维链
+ *  （2026-09-05 实案×2：1158 额度截断已修，1163 stop+content 空为自发怪癖），
+ *  视为可重试失败 */
+class EmptyContentError extends Error {}
+
+/** 判断错误是否可重试：网络错误（TypeError）、5xx、空正文可重试；
  *  4xx、AbortError、API 级错误（data.error）不重试。 */
 function isRetryableError(e: unknown): boolean {
   if (e instanceof DOMException && e.name === 'AbortError') return false;
+  if (e instanceof EmptyContentError) return true;
   if (e instanceof TypeError) return true;
   if (e instanceof Error) {
     const m = e.message.match(/^API 请求失败 \((\d{3})\)/);
@@ -80,7 +86,9 @@ export async function callDeepSeekWithRetry(messages: ChatMsg[], externalSignal?
 
       const data = await resp.json();
       if (data?.error) throw new Error(data.error.message || 'API 返回错误');
-      return data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? '';
+      const content = (data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? '').trim();
+      if (!content) throw new EmptyContentError('模型返回空正文');
+      return content;
     } catch (e) {
       lastError = e;
 
@@ -88,7 +96,7 @@ export async function callDeepSeekWithRetry(messages: ChatMsg[], externalSignal?
       if (!isRetryableError(e)) throw e;
 
       if (attempt < RETRY_COUNT) {
-        toastr.info(`网络波动，正在重试 (${attempt + 1}/${RETRY_COUNT})...`);
+        toastr.info(e instanceof EmptyContentError ? `模型输出为空，自动重试 (${attempt + 1}/${RETRY_COUNT})...` : `网络波动，正在重试 (${attempt + 1}/${RETRY_COUNT})...`);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } finally {
