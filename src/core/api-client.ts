@@ -19,7 +19,9 @@ const GENERATE_URL = '/api/backends/chat-completions/generate';
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
 const DEEPSEEK_MODEL = 'deepseek-v4-flash';
 const REASONING_EFFORT = 'low';
-const MAX_TOKENS = 4096;
+/** 思考+正文共享此额度：2026-09-05 实案＝思维链 6570 字把 4096 额度耗尽，
+ *  finish_reason=length、正文 0 字（"未能解析出任何选项"）；16k 给思考失控留足余量 */
+const MAX_TOKENS = 16384;
 const TIMEOUT_SECONDS = 180;
 /** 网络类错误自动重试次数（治弱网抖动），硬编码不设 UI */
 const RETRY_COUNT = 1;
