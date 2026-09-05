@@ -124,11 +124,16 @@
           class="choice-count-item"
           :title="t`倍数越高越不容易抽不到合适条目，代价是消耗更多 token`"
         >
-          <select v-model.number="gs.settings.candidate_multiplier" class="text_pole" style="width: auto">
-            <option :value="1">{{ t`关闭` }}</option>
-            <option :value="2">×2</option>
-            <option :value="3">×3</option>
-          </select>
+          <span>×</span>
+          <input
+            v-model.number="gs.settings.candidate_multiplier"
+            type="number"
+            min="1"
+            max="10"
+            step="1"
+            class="text_pole"
+            style="width: 4.5em"
+          />
         </label>
       </div>
     </div>

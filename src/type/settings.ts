@@ -130,7 +130,7 @@ export const GlobalSettings = z
   .object({
     schema_version: z.number().default(0),
     /** 候选超发倍数：抽签数 = 目标条数 × 倍数，超发候选由生成 AI 终选，过滤不合场景的条目 */
-    candidate_multiplier: z.number().int().min(1).max(3).default(2),
+    candidate_multiplier: z.number().int().min(1).max(10).default(3),
     prompt_rules: PromptRules.prefault({}),
     // FilterSettings 全字段带 default，{} 作为输入 parse 即得全默认对象；
     // 不能用 .default({})：zod4 的 default 参数是输出类型，要求逐字段写全
