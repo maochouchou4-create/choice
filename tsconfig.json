@@ -9,7 +9,7 @@
     // （auto-imports.d.ts 的 @ts-nocheck 掩盖了这条链路的报错）。
     "types": ["jquery", "jqueryui", "lodash", "toastr"],
     "paths": {
-      "@sillytavern/*": ["./../../../../*"],
+      "@sillytavern/*": ["../TauriTavern/src/*"],
       "@/*": ["./src/*"]
     },
     "moduleDetection": "auto",

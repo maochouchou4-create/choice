@@ -8,8 +8,5 @@
   "author": "哈哈氣💨",
   "version": "0.0.7",
   "homePage": "https://github.com/Junwu-Git/choice",
-  "auto_update": true,
-  "i18n": {
-    "en": "i18n/en.json"
-  }
+  "auto_update": true
 }
