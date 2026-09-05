@@ -1,449 +1,113 @@
 import type { PoolEntry } from '@/type/settings';
 
 /** 条目池唯一事实源（无存档无 UI，改条目＝改本文件→build→推 fork）。
- *  出厂默认：12 组 49 条（含 1 条 pinned 转场推进）。
- *  抽取＝均匀随机无放回（weight/分组轮抽已删）；场景适配＝候选超发+AI 终选，
- *  场景性强的条目挂自由文本 condition 交由生成 AI 判断；category 仅作组织标签。 */
+ *  出厂默认：10 组 84 条（含 1 条 pinned 转场推进，不占随机名额，实际随机池 83 条）。
+ *  设计哲学：条目＝通用行动原型，不预设人设；人设是"颜料"，由生成 AI 在改写时上色。
+ *  措辞全面中性化，禁止自带城府/老练气质；无条件挂载机制（原 [条件] 已删）。
+ *  id 采用「组前缀-序号」语义化命名，仅作唯一标识，无外部契约。
+ *  分组框架由子代理两轮审计打磨（2026-09-05），单轴＝行动的主要作用层面。 */
 export const DEFAULT_MASTER_POOL: PoolEntry[] = [
-  {
-    'id': '06281157-6887-483e-b9e8-a00f1f2f646e\r',
-    'type': '顺势而为',
-    'content': '不预设特定策略，让角色顺着当前情境做出最自然的反应，行动与情绪贴合角色既有性格',
-    'rule': '',
-    'pinned': false,
-    'category': '稳态基线',
-    'condition': ''
-  },
-  {
-    'id': '46f40348-1295-4590-bf13-20148f1a6878\r',
-    'type': '就地取材',
-    'content': '抓住当前环境中的具体物件或空间特征，做出有目的性的互动行为',
-    'rule': '',
-    'pinned': false,
-    'category': '环境互动',
-    'condition': ''
-  },
-  {
-    'id': 'ac7a380e-0fc8-4a8e-9cb3-708a65a262bc\r',
-    'type': '转场推进',
-    'content': '用一两句精炼的叙述完成时间跳跃或地点切换，快速进入下一段剧情',
-    'rule': '此项固定生成，不参与随机抽取',
-    'pinned': true,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': 'd7b1c9b6-b4e6-4142-bece-d8a60891674a\r',
-    'type': '意外走向',
-    'content': '利用当前场景中被忽略的细节或信息差，制造一个意料之外但情理之中的转折',
-    'rule': '',
-    'pinned': false,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': '184ab76e-eff4-4077-92d5-a5546334156d\r',
-    'type': '突发变故',
-    'content': '引入一个来自场景外部的干扰——突然的访客、消息、声响或异动——打断当前节奏、改变走向',
-    'rule': '干扰必须与既有世界观和场景设定相容，不得凭空引入新人物或超展开',
-    'pinned': false,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': '723b408e-8bf3-49a5-bef9-b1bc00bd841e\r',
-    'type': '旧事重提',
-    'content': '由眼前的某个具体事物自然勾起一段往事，用简短回忆映照当下处境，再收回到现实',
-    'rule': '回忆篇幅不超过两三句，重点在回忆与当下的映照，不写大段闪回',
-    'pinned': false,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': '1e873462-c053-4ada-a15b-88ffcb3a9281\r',
-    'type': '软性时限',
-    'content': '为当前局势引入一个自然的时间压力——店要打烊、对方即将离开、约定临近——制造紧迫感',
-    'rule': '',
-    'pinned': false,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': '44e3e679-b7df-4c69-8ffb-f9e73e5d706a\r',
-    'type': '创意脑洞',
-    'content': '跳出当前思路的惯性，提出一个出人意料但仍在情理边缘内的互动或行动方向',
-    'rule': '创意不得破坏世界观基本设定，追求新奇而非荒诞',
-    'pinned': false,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': '00d078ed-f187-4e96-af8e-75b8bf0a0653\r',
-    'type': '主动收束',
-    'content': '主动为当前场景画上句号——提出告别、送行、转场提议或对当下话题做个总结——把故事推向下一个阶段',
-    'rule': '收束须自然有礼，不生硬掐断仍有张力的对话',
-    'pinned': false,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': '4cd6cf68-d8e1-4914-8ee1-9013b443a21c\r',
-    'type': '背景揭示',
-    'content': '借机揭开一段此前埋下的伏笔或角色不为人知的背景信息，让剧情向人物纵深展开',
-    'rule': '',
-    'pinned': false,
-    'category': '剧情引擎',
-    'condition': ''
-  },
-  {
-    'id': '244fae0b-b392-4a82-a074-159f1385d80d\r',
-    'type': '暧昧触碰',
-    'content': '在不逾越角色关系边界的前提下，通过细微的肢体动作或含蓄的暗示拉近情感距离',
-    'rule': '',
-    'pinned': false,
-    'category': '情感升温',
-    'condition': '双方关系已有暧昧张力或好感基础'
-  },
-  {
-    'id': '41727a9d-360b-46ea-a7ce-a4e84d1f32b5\r',
-    'type': '温暖靠近',
-    'content': '通过表达理解、分享类似经历或提供实际帮助，缩短与对方的心理距离',
-    'rule': '',
-    'pinned': false,
-    'category': '情感升温',
-    'condition': ''
-  },
-  {
-    'id': '2e82721d-0214-4275-9668-5a2581413a1c\r',
-    'type': '卸下防备',
-    'content': '在信任足够的前提下，坦露一件平日不愿提起的心事或软肋，以真实的脆弱换取对方更深的回应',
-    'rule': '',
-    'pinned': false,
-    'category': '情感升温',
-    'condition': '双方已建立足够信任，且当前氛围私密安全'
-  },
-  {
-    'id': '49a7b08d-bf09-41da-8546-97c9d79bc8c0\r',
-    'type': '一诺千金',
-    'content': '针对对方最在意的顾虑给出明确的表态或承诺，并配一个立刻可兑现的小行动作为证明',
-    'rule': '',
-    'pinned': false,
-    'category': '情感升温',
-    'condition': '对方存在明显的不安或顾虑，需要确定感'
-  },
-  {
-    'id': 'ddaac18b-bd46-495e-b151-a6b6e01c8d6a\r',
-    'type': '情感深入',
-    'content': '把话题引向更深的情感层——剖析自己此刻的感受、或温柔地询问对方内心真实的想法',
-    'rule': '',
-    'pinned': false,
-    'category': '情感升温',
-    'condition': ''
-  },
-  {
-    'id': '4484b7b6-2821-4754-b747-5adf5dcac9a4\r',
-    'type': '表白时机',
-    'content': '抓住当下的氛围与契机，把一直没说出口的心意挑明，或用行动让心意不言自明',
-    'rule': '',
-    'pinned': false,
-    'category': '情感升温',
-    'condition': '双方关系已到临界点，再进一步或彻底错过'
-  },
-  {
-    'id': '978a0b7c-b0b8-417e-950b-ec6af837885a\r',
-    'type': '轻松调侃',
-    'content': '用一句俏皮话、一个自嘲的举动或反差感十足的小动作，冲淡空气中的紧张',
-    'rule': '',
-    'pinned': false,
-    'category': '言语交锋',
-    'condition': ''
-  },
-  {
-    'id': 'dc6a7605-07a9-44f5-8e6a-02cdd0b51b31\r',
-    'type': '打破沉默',
-    'content': '主动挑起一个全新话题或行动，把场面从冷场僵持中带出来',
-    'rule': '',
-    'pinned': false,
-    'category': '言语交锋',
-    'condition': ''
-  },
-  {
-    'id': 'cc75f877-77c5-441c-9920-8e1154886f54\r',
-    'type': '借力打力',
-    'content': '把对方施加的压力、抛出的话题或设下的圈套接过来转化为对己方有利的筹码，顺势反制',
-    'rule': '',
-    'pinned': false,
-    'category': '言语交锋',
-    'condition': ''
-  },
-  {
-    'id': '57a69ff3-cf96-4296-9c49-e333d58e9a0f\r',
-    'type': '社交应对',
-    'content': '在多人在场或公开场合的语境下，得体地接住场面——应对他人目光、维护气氛或给自己留面子',
-    'rule': '',
-    'pinned': false,
-    'category': '言语交锋',
-    'condition': '场景中除主要互动对象外还有其他人在场'
-  },
-  {
-    'id': '965bf4b0-3460-48ff-9490-be7bbbfa3dc0\r',
-    'type': '幽默吐槽',
-    'content': '以内心吐槽或当面打趣的方式，对眼前的荒诞之处轻轻戳破，制造喜剧感',
-    'rule': '',
-    'pinned': false,
-    'category': '言语交锋',
-    'condition': ''
-  },
-  {
-    'id': 'd89e6439-75db-4825-9ce5-1a9bacd3b4d3\r',
-    'type': '旁敲侧击',
-    'content': '不直接点破，用看似无关的话题、玩笑或举动迂回试探对方的真实态度与底线',
-    'rule': '',
-    'pinned': false,
-    'category': '试探刺探',
-    'condition': ''
-  },
-  {
-    'id': '3150bca0-167f-4940-b1db-eb7c2b4bb3ae\r',
-    'type': '追根究底',
-    'content': '盯住对方话语中含糊其辞或前后矛盾的细节追问下去，挖掘其刻意回避的部分',
-    'rule': '',
-    'pinned': false,
-    'category': '试探刺探',
-    'condition': ''
-  },
-  {
-    'id': '9b7e2f6c-0eba-4f3b-aea4-df3da5f7550d\r',
-    'type': '悬疑探索',
-    'content': '对场景中可疑的痕迹、反常的细节或不完整的信息展开调查与求证',
-    'rule': '',
-    'pinned': false,
-    'category': '试探刺探',
-    'condition': '场景中存在未被解释的疑点或线索'
-  },
-  {
-    'id': '959c288c-1c3e-4c13-9b8c-2f8a86fc4abe\r',
-    'type': '防线试探',
-    'content': '故意做出一个略微越界的举动或说一句意味深长的话，观察对方的反应以确认关系的真实边界',
-    'rule': '试探幅度须小而可收回，不得一步跨过对方底线',
-    'pinned': false,
-    'category': '试探刺探',
-    'condition': ''
-  },
-  {
-    'id': '6a362775-f9b4-4505-9f06-76ea5e8769d4\r',
-    'type': '谋定后动',
-    'content': '暂不采取行动，先在心里盘算各方立场、动机与可用筹码，暗中酝酿一个具体可行的计划',
-    'rule': '',
-    'pinned': false,
-    'category': '策略谋划',
-    'condition': ''
-  },
-  {
-    'id': 'a9fca7c6-483b-4b01-ab14-a263b479eac5\r',
-    'type': '长线布局',
-    'content': '放下眼前的得失，做一个为更远目标铺路的安排或取舍',
-    'rule': '',
-    'pinned': false,
-    'category': '策略谋划',
-    'condition': ''
-  },
-  {
-    'id': '1d41e1f2-97f0-4df4-9bb0-df70a3e207d7\r',
-    'type': '借势用势',
-    'content': '识别当前局面里可借的力——他人的意图、场合的规则、正在发生的趋势——把自己想做的事顺势嫁接上去',
-    'rule': '',
-    'pinned': false,
-    'category': '策略谋划',
-    'condition': ''
-  },
-  {
-    'id': 'ab5a0747-af8a-4a81-8f66-5dfe01c42d95\r',
-    'type': '信息交易',
-    'content': '把自己掌握而对方想要的信息当作筹码，换取对方手中的东西或承诺',
-    'rule': '交易内容须与当前上下文中双方确实持有的信息相符',
-    'pinned': false,
-    'category': '策略谋划',
-    'condition': ''
-  },
-  {
-    'id': '03b44d45-699f-4fa4-a8ab-08433349f719\r',
-    'type': '邀请同行',
-    'content': '向对方发出一个具体的共同行动邀请——一起做某事、去某处、参与某个计划',
-    'rule': '',
-    'pinned': false,
-    'category': '合作协作',
-    'condition': ''
-  },
-  {
-    'id': 'a1c8dd69-932f-44dd-b12d-f5229b717acf\r',
-    'type': '分工托付',
-    'content': '把一件自己不便出面或独力难支的事，郑重地托付或提议分工给在场的某个人',
-    'rule': '',
-    'pinned': false,
-    'category': '合作协作',
-    'condition': ''
-  },
-  {
-    'id': '9302679d-6659-471e-a5bd-bb7c312ae984\r',
-    'type': '共同行动',
-    'content': '不商量、不请示，直接开始做一件需要对方配合的事，用行动本身发出协作的邀请',
-    'rule': '',
-    'pinned': false,
-    'category': '合作协作',
-    'condition': ''
-  },
-  {
-    'id': '992fee46-7bff-474c-be32-72d486554a36\r',
-    'type': '牺牲付出',
-    'content': '为保护或成全某人，主动承担代价、让出利益或揽下风险，用付出本身表达分量',
-    'rule': '牺牲须出自角色当下的真实动机，不写成自我感动',
-    'pinned': false,
-    'category': '合作协作',
-    'condition': ''
-  },
-  {
-    'id': '19972820-8a7b-4bd6-8c89-ac203ec98dfd\r',
-    'type': '借物传意',
-    'content': '借助递出、挪动或摆弄眼前的某件物品，让物件替自己传话——递伞、推过去一杯热茶、把某个东西轻轻合上',
-    'rule': '',
-    'pinned': false,
-    'category': '环境互动',
-    'condition': ''
-  },
-  {
-    'id': '904f43eb-a931-49f1-940b-e336d44a758d\r',
-    'type': '空间掌控',
-    'content': '通过调整自己与对方的空间关系——靠近一步、拉开距离、换到对方身边坐下——改变两人之间的气场',
-    'rule': '',
-    'pinned': false,
-    'category': '环境互动',
-    'condition': ''
-  },
-  {
-    'id': '151e3652-6ec2-4504-ac20-be761454e244\r',
-    'type': '他人视角',
-    'content': '暂时离开当前角色的视线，以在场另一位角色的眼睛观察同一时刻发生的事情',
-    'rule': '只写该角色能看到、感知到的内容，不得泄露其视角之外的信息',
-    'pinned': false,
-    'category': '留白镜头',
-    'condition': ''
-  },
-  {
-    'id': '2301ee04-8f95-4ae1-8acc-371126dd6782\r',
-    'type': '悄然旁观',
-    'content': '不主动介入对话，通过眼神、姿态或细微情绪变化传递态度，保持沉默但并非无动于衷',
-    'rule': '此项不涉及对白，纯粹依靠动作与内心活动',
-    'pinned': false,
-    'category': '留白镜头',
-    'condition': ''
-  },
-  {
-    'id': 'adc2e8e3-183b-4d2b-947d-93f4f91d6efa\r',
-    'type': '感官沉浸',
-    'content': '放慢节奏，通过五感细节描摹当前氛围与对方的细微状态，让画面先于行动',
-    'rule': '',
-    'pinned': false,
-    'category': '留白镜头',
-    'condition': ''
-  },
-  {
-    'id': '07368053-fd05-4de2-abb7-68d773a3ec6e\r',
-    'type': '分岔回望',
-    'content': '在内心回望此前某个分岔的选择，短暂呈现\'如果当时\'的想象，再收回当下',
-    'rule': '',
-    'pinned': false,
-    'category': '留白镜头',
-    'condition': ''
-  },
-  {
-    'id': '4eff7291-0037-495c-bab0-b46adb72b183\r',
-    'type': '正面交锋',
-    'content': '主动挑起或正面回应一场冲突，把潜藏的矛盾摆上台面，迫使双方亮明真实立场',
-    'rule': '',
-    'pinned': false,
-    'category': '冲突对抗',
-    'condition': '场景中存在真实矛盾或立场对立，而非日常闲聊'
-  },
-  {
-    'id': '6319000e-37ab-4519-9061-f3d44da66fea\r',
-    'type': '退避三舍',
-    'content': '察觉气氛或局势于己不利时，暂时抽身、沉默或岔开话题，为后续行动保留回旋余地',
-    'rule': '',
-    'pinned': false,
-    'category': '冲突对抗',
-    'condition': ''
-  },
-  {
-    'id': '3c18bbe8-5b3e-4041-9495-9e12867063a0\r',
-    'type': '冲突升级',
-    'content': '主动加码——把小摩擦推向公开对立，或让暗斗转为明争，逼局面提前摊牌',
-    'rule': '升级须有角色可自洽的动机，不为吵而吵',
-    'pinned': false,
-    'category': '冲突对抗',
-    'condition': ''
-  },
-  {
-    'id': '1f6d087a-0c28-429c-ab49-fabe90e88566\r',
-    'type': '立场宣示',
-    'content': '不做任何攻击动作，只是清晰地、不容误解地亮出自己的底线与立场，让对方知道再进一步意味着什么',
-    'rule': '',
-    'pinned': false,
-    'category': '冲突对抗',
-    'condition': ''
-  },
-  {
-    'id': '3da59b71-4f2e-4882-bede-620f16db0890\r',
-    'type': '正面治愈',
-    'content': '用行动化解眼前的矛盾或低气压——道歉、补偿、或做出一个让步姿态——让关系回到可呼吸的状态',
-    'rule': '',
-    'pinned': false,
-    'category': '正向缓和',
-    'condition': ''
-  },
-  {
-    'id': 'd9ea7a95-2d00-426a-98b1-3286332037a0\r',
-    'type': '缓和降温',
-    'content': '给滚烫的场面降火：主动放软语气、转移焦点到轻松的事、或提议先搁置争议',
-    'rule': '',
-    'pinned': false,
-    'category': '正向缓和',
-    'condition': ''
-  },
-  {
-    'id': '824d18ee-c236-46a6-93ee-9050f68087a1\r',
-    'type': '关系修复',
-    'content': '向一段出现裂痕的关系伸出手——重提共同回忆、承认自己的一份责任、或做出修复性的举动',
-    'rule': '',
-    'pinned': false,
-    'category': '正向缓和',
-    'condition': '双方之间存在尚未愈合的嫌隙或误会'
-  },
-  {
-    'id': 'eb3fbe40-2ae7-449c-aaf7-eca8c92bf0b8\r',
-    'type': '大胆尝试',
-    'content': '当常规手段不足以推动局面时，采取一个带有明显风险但可能改变局势走向的行动',
-    'rule': '',
-    'pinned': false,
-    'category': '冒险高能',
-    'condition': ''
-  },
-  {
-    'id': 'b721a677-a5e4-42aa-ae65-15f404bac99a\r',
-    'type': '动作冒险',
-    'content': '以身体动作为主语——追逐、攀爬、躲避、动手操作——用高画面感的动作直接应对眼前的局面',
-    'rule': '',
-    'pinned': false,
-    'category': '冒险高能',
-    'condition': ''
-  },
-  {
-    'id': '48d05b30-19d6-4324-9bca-9f047d954c36\r',
-    'type': '激进突破',
-    'content': '放弃迂回，用最直接甚至粗暴的方式撕开当前的僵局或困境',
-    'rule': '',
-    'pinned': false,
-    'category': '冒险高能',
-    'condition': ''
-  },
+  // ── A 日常共处：把"待在一起的时间"过出内容 ──
+  { id: 'daily-01', type: '打破沉默', content: '安静或冷场之中自然开个话头，让对话重新流动起来', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-02', type: '闲话日常', content: '说说今天遇到的琐事见闻，让对话落回生活的地面', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-03', type: '玩笑与吐槽', content: '用玩笑调侃对方或吐槽眼前的事，调节当下的气氛', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-04', type: '一起吃饭', content: '提议同席、分享手边的食物，或约一顿饭', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-05', type: '一起去逛', content: '约对方逛街、逛店、买菜，来一场边走边看的出行', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-06', type: '一起消磨', content: '散步、发呆、看同一处风景，不为什么地一起待着', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-07', type: '日常照顾', content: '递水、添衣、提醒休息，用小事照看对方的生活', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-08', type: '应对在场其他人', content: '与在场的第三方寒暄、周旋或解围，照应场面', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-09', type: '认识与联系', content: '初识时自我介绍破冰，或自然地留下再联系的线索', rule: '', pinned: false, category: '日常共处' },
+  { id: 'daily-10', type: '多待一会儿', content: '找个自然的理由同路、晚走，把共处的时间再延长一些', rule: '', pinned: false, category: '日常共处' },
+
+  // ── B 靠近与接触：用身体距离、视线与接触替嘴说话 ──
+  { id: 'touch-01', type: '缩短距离', content: '坐近一点、走近一点，让两人之间的空间距离变小', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-02', type: '保持注视', content: '看着对方，让视线在他脸上多停留一会儿', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-03', type: '轻轻的接触', content: '碰一下对方的手臂、肩头，做一个短暂而轻浅的接触', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-04', type: '并肩的步调', content: '并排走时悄悄对齐速度与位置，让两个人的步调合上', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-05', type: '递接的接触', content: '递还物品的时候，让指尖的接触自然发生', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-06', type: '拉住挽留', content: '在对方转身要离开的瞬间，伸手拉住', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-07', type: '拥抱依靠', content: '张开怀抱抱住对方，或把重心靠向对方', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-08', type: '退开半步', content: '主动拉开一点身体距离，给彼此留出空隙或回避什么', rule: '', pinned: false, category: '靠近与接触' },
+  { id: 'touch-09', type: '亲昵的小动作', content: '牵手、靠肩、揉头发，做关系亲近之后才有的日常小动作', rule: '', pinned: false, category: '靠近与接触' },
+
+  // ── C 心意交换：让心里的话流向对方，也邀请对方的心意流回来 ──
+  { id: 'heart-01', type: '直说感受', content: '把此刻的心情原样说出来，不绕弯子', rule: '', pinned: false, category: '心意交换' },
+  { id: 'heart-02', type: '卸下防备', content: '主动示弱，把平时不给人看的一面交出去', rule: '', pinned: false, category: '心意交换' },
+  { id: 'heart-03', type: '聊更深处', content: '把话题从表层带进更深的地方——在意什么、害怕什么、看重什么', rule: '', pinned: false, category: '心意交换' },
+  { id: 'heart-04', type: '交心往事', content: '讲一段自己的过去，交出一段亲身经历', rule: '回忆篇幅不超过三句', pinned: false, category: '心意交换' },
+  { id: 'heart-05', type: '说出心意', content: '把喜欢说出口，让心意落到明面上', rule: '说完停在等待回应处，不代写对方反应', pinned: false, category: '心意交换' },
+  { id: 'heart-06', type: '确认心意', content: '想知道对方怎么想，直接或委婉地问清楚', rule: '', pinned: false, category: '心意交换' },
+  { id: 'heart-07', type: '许下约定', content: '提出一个只属于两个人的约定', rule: '', pinned: false, category: '心意交换' },
+  { id: 'heart-08', type: '交换秘密', content: '我告诉你一件事，你也告诉我一件，各自交出一个秘密', rule: '', pinned: false, category: '心意交换' },
+  { id: 'heart-09', type: '提起以后', content: '聊聊将来的打算，让"以后"出现在两个人的话题里', rule: '', pinned: false, category: '心意交换' },
+  { id: 'heart-10', type: '说出在意', content: '道谢、夸奖、说牵挂，把在意用话说出口', rule: '', pinned: false, category: '心意交换' },
+
+  // ── D 被动应对：接住对方刚抛来的球——刺激来自对方，落点是回应 ──
+  { id: 'react-01', type: '被撩之后', content: '接住对方的撩拨或调笑，做出自己的回应——顶回去、装傻还是脸红都行', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-02', type: '被指责时', content: '面对对方的指责，辩解、承认，或说出自己的委屈', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-03', type: '面对告白', content: '接住对方的告白，给出接受、婉拒或请对方等待的回应', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-04', type: '被误解时', content: '被冤枉或误会时澄清事实，或暂不辩解', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-05', type: '被帮助后', content: '接受对方的帮助，并回应这份好意', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-06', type: '被冷落时', content: '被晾在一边时，直接发问、试探着靠近，或安然自处', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-07', type: '接住玩笑', content: '对方的调侃或刁难，顺势接下并回敬过去', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-08', type: '面对突然接触', content: '被突然拉住、搂住、碰到时，做出即时的反应', rule: '', pinned: false, category: '被动应对' },
+  { id: 'react-09', type: '被托付要事', content: '对方把重要的事交到自己手上，权衡接与不接', rule: '', pinned: false, category: '被动应对' },
+
+  // ── E 自我安顿：处理自己的内心波动与状态——刺激源在自己 ──
+  { id: 'self-01', type: '稳住心神', content: '心乱时深呼吸、整理思绪，先让自己站稳', rule: '', pinned: false, category: '自我安顿' },
+  { id: 'self-02', type: '掩饰失态', content: '脸红、失言之后，努力装作若无其事', rule: '', pinned: false, category: '自我安顿' },
+  { id: 'self-03', type: '处理尴尬', content: '冷场或出丑之后，用自嘲把场面带过去', rule: '', pinned: false, category: '自我安顿' },
+  { id: 'self-04', type: '承认疲惫', content: '累了就说累，不再硬撑', rule: '', pinned: false, category: '自我安顿' },
+  { id: 'self-05', type: '克制冲动', content: '话到嘴边又咽回去，先按住性子想一下再说', rule: '', pinned: false, category: '自我安顿' },
+  { id: 'self-06', type: '暂离片刻', content: '找个借口离开现场一小会儿，给自己留点空间', rule: '', pinned: false, category: '自我安顿' },
+  { id: 'self-07', type: '豁出去', content: '克服犹豫，鼓起勇气做平时不敢做的事', rule: '', pinned: false, category: '自我安顿' },
+
+  // ── F 冲突与界限：分歧的升级与降温、界限划定、裂痕修复与关系结束 ──
+  { id: 'clash-01', type: '摆到台面上', content: '不再回避，把分歧正面谈开', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-02', type: '给气氛降温', content: '火药味上来时先撤火，岔开话题或放软语气', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-03', type: '亮明底线', content: '告诉对方哪里是自己的界限，不能碰', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-04', type: '不退让', content: '态度放得更坚决，明确表示这次不让步', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-05', type: '说不与拒绝', content: '拒绝对方的请求或邀约，把"不"说出口', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-06', type: '道歉认错', content: '承认是自己不对，把道歉好好说出口', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-07', type: '主动和好', content: '冷战或决裂之后先伸出手，试探着把关系修回来', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-08', type: '暂时退开', content: '从冲突现场先撤一步，避免当场激化', rule: '', pinned: false, category: '冲突与界限' },
+  { id: 'clash-09', type: '好聚好散', content: '体面地结束这段关系——放手、告别、送上祝福', rule: '', pinned: false, category: '冲突与界限' },
+
+  // ── G 协作与付出：一起做事，以及单方面为对方多做一点 ──
+  { id: 'coop-01', type: '发出邀约', content: '约对方一起做某件具体的事', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-02', type: '分工协作', content: '把事情拆开分头做、托付给对方，或开口求助', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-03', type: '并肩做事', content: '不分你我，和对方一起动手做同一件事', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-04', type: '让渡与付出', content: '让出自己的便利、时间或利益，成全对方', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-05', type: '安慰开解', content: '对方低落时劝解开导，或想办法逗TA开心', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-06', type: '守护陪伴', content: '什么都不做，只是安静地留在对方身边', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-07', type: '照顾对方', content: '对方生病、受伤、喝醉时，实际地照料', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-08', type: '替对方出头', content: '对方被为难时，站到TA这边', rule: '', pinned: false, category: '协作与付出' },
+  { id: 'coop-09', type: '倾听心事', content: '请对方说出来，自己只管好好接住', rule: '', pinned: false, category: '协作与付出' },
+
+  // ── H 探索与冒险：对真相、往事与未知的好奇，以及在未知中的行动 ──
+  { id: 'explore-01', type: '查证不解', content: '眼前的疑点促使去查看、验证', rule: '', pinned: false, category: '探索与冒险' },
+  { id: 'explore-02', type: '把话问到底', content: '对在意的事追问下去，不停在表面的答案上', rule: '', pinned: false, category: '探索与冒险' },
+  { id: 'explore-03', type: '从侧面了解', content: '不直接问，绕个弯从别的话题或别人那里打听', rule: '', pinned: false, category: '探索与冒险' },
+  { id: 'explore-04', type: '重提往事', content: '翻出两个人共同经历的旧事，重新聊起', rule: '', pinned: false, category: '探索与冒险' },
+  { id: 'explore-05', type: '打量四周', content: '注意环境里的细节，察觉不对劲的地方', rule: '', pinned: false, category: '探索与冒险' },
+  { id: 'explore-06', type: '求证疑惑', content: '心里对对方有疑虑，当面问清楚', rule: '', pinned: false, category: '探索与冒险' },
+  { id: 'explore-07', type: '冒险一试', content: '危机或不确定面前，选择行动而不是等待', rule: '', pinned: false, category: '探索与冒险' },
+
+  // ── I 叙事与节奏：故事推进层。含 pinned 条目；多为"作者型"选项 ──
+  { id: 'scene-01', type: '转场推进', content: '推进到下一个时间、地点或场景，让故事翻页', rule: '用一两句精炼叙述完成时间或地点切换，不展开新剧情事件', pinned: true, category: '叙事与节奏' },
+  { id: 'scene-02', type: '顺势延展', content: '不引入新事件，让当前的时刻自然延续、发酵', rule: '', pinned: false, category: '叙事与节奏' },
+  { id: 'scene-03', type: '小小的意外', content: '引入一个小插曲，让剧情轻轻偏移一点点', rule: '', pinned: false, category: '叙事与节奏' },
+  { id: 'scene-04', type: '突发状况', content: '引入一个较大的外部事件，打乱当前的节奏', rule: '事件必须与既有世界观和场景相容，不得凭空引入新人物', pinned: false, category: '叙事与节奏' },
+  { id: 'scene-05', type: '自然的时限', content: '给场景一个自然的时间压力或终点——店要打烊了、车快来了', rule: '', pinned: false, category: '叙事与节奏' },
+  { id: 'scene-06', type: '脑洞展开', content: '提出一个跳出常规但仍在情理边缘的展开方向', rule: '', pinned: false, category: '叙事与节奏' },
+  { id: 'scene-07', type: '为一幕收尾', content: '主动给当前一幕画上句号——告别、道晚安、落幕', rule: '', pinned: false, category: '叙事与节奏' },
+
+  // ── J 环境与镜头：动作落在物件、空间与画面上，而非对话 ──
+  { id: 'lens-01', type: '用手边的东西', content: '摆弄、使用眼前的物品，让手上有戏', rule: '', pinned: false, category: '环境与镜头' },
+  { id: 'lens-02', type: '借物传意', content: '借一件物品把心意递过去——递杯热饮、把伞倾向对方', rule: '', pinned: false, category: '环境与镜头' },
+  { id: 'lens-03', type: '换个位置', content: '从当前位置挪去别处——窗边、门外、离对方更近的地方', rule: '', pinned: false, category: '环境与镜头' },
+  { id: 'lens-04', type: '他人视角', content: '以另一位在场角色的视角，写一段此刻的画面', rule: '全池唯一特殊主语条目：主语不是 user，以该角色的视角写其能看到、感知到的内容，不得泄露其视角之外的信息', pinned: false, category: '环境与镜头' },
+  { id: 'lens-05', type: '退到一旁', content: '从互动中退出来，在一旁安静地看着', rule: '', pinned: false, category: '环境与镜头' },
+  { id: 'lens-06', type: '慢下来感受', content: '放慢节奏，用感官细写此刻的声音、气味与温度', rule: '', pinned: false, category: '环境与镜头' },
+  { id: 'lens-07', type: '抽离回望', content: '从当下抽离一瞬，回望这段关系或这一天', rule: '', pinned: false, category: '环境与镜头' },
 ];

@@ -9,7 +9,6 @@ const make = (id: string, pinned = false): PoolEntry => ({
   rule: '',
   pinned,
   category: '',
-  condition: '',
 });
 
 const range = (n: number, prefix = 'e'): PoolEntry[] =>

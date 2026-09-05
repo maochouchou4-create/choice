@@ -332,7 +332,6 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
       .map(e => {
         let line = e.type;
         if (e.content.trim()) line += ': ' + e.content.trim();
-        if (e.condition.trim()) line = `[条件: ${e.condition.trim()}] ${line}`;
         if (e.rule.trim()) line += ` [规则: ${e.rule.trim()}]`;
         return line;
       })
@@ -346,8 +345,6 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
         .map(e => {
           let line = e.type;
           if (e.content.trim()) line += ': ' + e.content.trim();
-          // 固定条目的 rule 同为硬约束，与候选行对称渲染；condition 不渲染——
-          // 固定条目语义=无条件必含，带条件标记反而与"必须包含"自相矛盾
           if (e.rule.trim()) line += ` [规则: ${e.rule.trim()}]`;
           return line;
         })

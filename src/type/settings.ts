@@ -13,7 +13,6 @@ export const PoolEntry = z
     rule: z.string().default(''),
     pinned: z.boolean().default(false),
     category: z.string().default(''),
-    condition: z.string().default(''),
   })
   // zod4 的 prefault 参数类型是输入类型：PoolEntry 的 id/type 无 default（必填），
   // 空对象不满足签名；占位值仅在输入为 undefined 的极端路径触发，正常条目不受影响
