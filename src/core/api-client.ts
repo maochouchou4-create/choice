@@ -8,13 +8,13 @@ export type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string }
 const GENERATE_URL = '/api/backends/chat-completions/generate';
 
 /** DeepSeek 专用模型档案——换模型＝改这一个对象→build→推 fork→TT 更新即生效。
+ *  非本档案承载的能力（前缀续写等）用到时再查官方文档/社区经验，按需扩展。
  *
  *  换模型检查清单（逐项核对新模型文档/实测）：
  *  ① model/baseUrl：模型名与端点；② reasoningEffort：档位语义与传输通道（见下）；
- *  ③ maxTokens：输出上限、思维链是否计入额度；④ prefillEnabled：是否支持/需要
- *  assistant 前缀引导（思考模型慎用，见下）；⑤ stream：流式断流表现；⑥ 输出遵从度：
- *  <options> 块格式与禁用符号（解析端 options-parse.ts）；⑦ 空正文/思维链吞正文怪癖
- *  （EmptyContentError 重试已兜底）。
+ *  ③ maxTokens：输出上限、思维链是否计入额度；④ stream：流式断流表现；
+ *  ⑤ 输出遵从度：<options> 块格式与禁用符号（解析端 options-parse.ts）；
+ *  ⑥ 空正文/思维链吞正文怪癖（EmptyContentError 重试已兜底）。
  *
  *  - reasoningEffort='low'：V4 思考强度 low/high/max，默认 low（用户拍板：high 档思考过久）。
  *    传输通道：TT 后端对 openai 源的 reasoning_effort 有 OpenAI 模型白名单（deepseek 会被
@@ -24,9 +24,6 @@ const GENERATE_URL = '/api/backends/chat-completions/generate';
  *  - maxTokens=16384：思考+正文共享额度（官方未文档化思维链是否计入，2026-09-05 实案证实
  *    计入：思维链 6570 字耗尽 4096 即正文 0 字）。官方上限 384K，16k 为正文不被截断的保险值。
  *  - stream=false：弱网下流式断流（body_interrupted）面更大，整响应一次拿更稳。
- *  - prefillEnabled=false：正式 /v1 接口以 assistant 结尾无行为保障；真前缀续写是 Beta 功能
- *    （beta base_url + prefix:true）且与思考模式兼容性官方未提；V4 思考模式实测把续写判进
- *    思维链（曾致正文全空）。思考模型不需要格式引导——非思考模型想要可改 true 发 ACK。
  *  - temperature/top_p 不发：V4 思考模式官方明确"设置不报错但不生效"。 */
 export const MODEL_PROFILE = {
   baseUrl: 'https://api.deepseek.com/v1',
@@ -34,7 +31,6 @@ export const MODEL_PROFILE = {
   reasoningEffort: 'low',
   maxTokens: 16384,
   stream: false,
-  prefillEnabled: false,
   timeoutSeconds: 180,
   retryCount: 2,
 } as const;

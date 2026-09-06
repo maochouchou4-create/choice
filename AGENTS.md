@@ -20,7 +20,7 @@ SillyTavern 第三方扩展（基于 `tavern_extension_template` 二次开发）
   - 条目池＝`src/core/default-pool.ts`（11 组 94 条通用行动原型，含 NSFW 组不保底）；
   - API＝`src/core/api-client.ts`（DeepSeek 专用全常量）。
   用户声明**永不通过插件界面改内容，插件只留开关**；勿复活任何编辑界面/配置体系/存档迁移。
-- **消息组装走角色结构（generator.buildMessages 线性直写）**：system 规则正文 → [prefill] assistant 确认 → system `<reference>`（user persona/世界书/角色卡三件套）→ system `<history>` 包裹的交替历史（末条 assistant 包 `<current_scene>`）→ user 本轮任务。**铁律：消息序列末条不得以未闭合标签结尾**（思考模型会把续写判为思维链、正文为空，2026-09-05 实案）。
+- **消息组装走角色结构（generator.buildMessages 线性直写）**：system 规则正文 → system `<reference>`（user persona/世界书/角色卡三件套，含 EJS 渲染开关）→ system `<history>` 包裹的交替历史（末条 assistant 包 `<current_scene>`，历史本体降为 system 不引导续写）→ user 本轮任务。**铁律：消息序列末条不得以未闭合标签结尾**（思考模型会把续写判为思维链、正文为空，2026-09-05 实案）。预填充机制已整体删除（DeepSeek 无官方支持，换模型用到再查文档扩展）。
 - **行动主语＝当前场景任一在场角色（2026-09-05 拍板）**：选项的行动者按戏剧张力选择，每条内容以行动者名字开头；人设筛按行动者各自过。特殊条目例外见提示词【特殊条目】（转场推进无行动者、他人视角为镜头型）。
 - **楼层持久化挂在消息对象上**：生成结果存进 `message.extra.choice[String(swipeId)]`（`setting_field='choice'`，**不是** 早期文档写的 `asyncActionOptions`），按楼层+swipe 双维隔离，切楼层/切 swipe 选项不串；同楼层多次生成走 `generations[]` + `currentIndex` 翻页，不跨楼层保留。
 

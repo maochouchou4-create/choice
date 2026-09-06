@@ -7,13 +7,13 @@ import { uuidv4 } from '@sillytavern/scripts/utils';
 import { power_user } from '@sillytavern/scripts/power-user';
 import { parseOptions, resolveCount } from '@/core/options-parse';
 import { resolvePool } from '@/core/pool-resolver';
-import { callDeepSeekWithRetry, MODEL_PROFILE, type ChatMsg } from '@/core/api-client';
+import { callDeepSeekWithRetry, type ChatMsg } from '@/core/api-client';
 import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
 import { useChatSettingsStore } from '@/store/chat-settings';
 import { useGlobalSettingsStore } from '@/store/global-settings';
 import type { ChoiceGeneration } from '@/core/options-store';
 import type { WorldInfoGlobalSettings } from '@/type/settings';
-import { ASSISTANT_ACK, SYSTEM_RULES, USER_TASK } from '@/core/default-prompt';
+import { SYSTEM_RULES, USER_TASK } from '@/core/default-prompt';
 
 export type GenerateTarget = { messageId: number; swipeId: number };
 
@@ -48,8 +48,8 @@ const sub = (t: string, c: Ctx) =>
     .replaceAll('{{option_person}}', c.optionPerson);
 
 /** 消息组装（线性直写）：
- *  system 规则正文 → [prefill] assistant 确认 → system <reference> 人设资料 →
- *  system <history> 包裹的交互历史 → user 本轮任务。
+ *  system 规则正文 → system <reference> 人设资料 → system <history> 包裹的交互历史
+ *  （历史本体降为 system，不引导续写）→ user 本轮任务。
  *  ⚠ 消息序列末尾不得以未闭合标签结尾：思考模型（DeepSeek V4）会把它判为思维链续写、正文为空 */
 export const buildMessages = async (
   ctx: Ctx,
@@ -57,8 +57,6 @@ export const buildMessages = async (
   contextRounds: number,
 ): Promise<ChatMsg[]> => {
   const gs = useGlobalSettingsStore();
-  // 预填充＝模型档案参数（api-client.ts MODEL_PROFILE.prefillEnabled，DeepSeek 关闭），不进设置 UI
-  const prefillEnabled = MODEL_PROFILE.prefillEnabled;
   const pr = gs.settings.prompt_rules;
   const augmentedCtx: Ctx = {
     ...ctx,
@@ -72,10 +70,7 @@ export const buildMessages = async (
   // 1. system：规则正文一整块
   msgs.push({ role: 'system', content: fill(SYSTEM_RULES) });
 
-  // 2. assistant 确认（仅预填充开启）
-  if (prefillEnabled) msgs.push({ role: 'assistant', content: ASSISTANT_ACK });
-
-  // 3. system：<reference> 人设参考资料（user persona / 世界书 / 角色卡三件套）
+  // 2. system：<reference> 人设参考资料（user persona / 世界书 / 角色卡三件套）
   const refParts: string[] = [];
   const personaDesc = power_user?.persona_description;
   if (personaDesc) {
@@ -103,21 +98,21 @@ export const buildMessages = async (
     });
   }
 
-  // 4. system：<history> 包裹的交互历史（历史本体保持 user/assistant 交替，供模型识别对话结构）
+  // 3. system：<history> 包裹的交互历史（历史本体降为 system，不引导模型续写对话）
   const history = buildChatHistory(contextRounds);
   if (history.length) {
     msgs.push({
       role: 'system',
       content: '<!-- 角色扮演交互历史，最新一条为 <current_scene> 标记的当前场景 -->\n<history>',
     });
-    for (const m of history) msgs.push(prefillEnabled ? m : { ...m, role: 'system' });
+    for (const m of history) msgs.push({ ...m, role: 'system' });
     msgs.push({ role: 'system', content: '</history>' });
   }
 
-  // 5. user：本轮任务（消息序列的最后一条，不得以未闭合标签结尾）
+  // 4. user：本轮任务（消息序列的最后一条，不得以未闭合标签结尾）
   msgs.push({ role: 'user', content: fill(USER_TASK) });
 
-  // 合并相邻同 role 消息（2 与 3、4 内部之间的相邻 system）
+  // 合并相邻同 role 消息（<reference>/<history> 内部的相邻 system）
   const merged: ChatMsg[] = [];
   for (const msg of msgs) {
     const last = merged[merged.length - 1];
