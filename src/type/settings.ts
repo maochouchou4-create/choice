@@ -84,8 +84,6 @@ export const PromptRules = z
     context_rounds: z.number().min(0).default(10).catch(10),
     /** 上下文模式：rounds = 取最后 N 轮（含隐藏消息）；visible_only = 仅未隐藏消息（不限轮数） */
     context_mode: z.enum(['rounds', 'visible_only']).default('visible_only'),
-    /** 关闭后不发送 assistant 预填充消息，兼容不支持 prefill 的模型 */
-    prefill_enabled: z.boolean().default(true),
     /** 选项人称（简单值），显示在生成页面 */
     option_person: z.string().default('第三人称'),
     /** 选项字数下限 */

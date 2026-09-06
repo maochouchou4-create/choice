@@ -79,21 +79,6 @@
     </div>
 
     <div class="choice-generation-section">
-      <label class="choice-check">
-        <input
-          v-model="rules.prefill_enabled"
-          type="checkbox"
-          :title="t`关闭后不发送 assistant 预填充消息，兼容不支持 prefill 的模型`"
-        />
-        <span class="choice-check-custom"></span>
-        <span class="choice-check-label">
-          <strong>{{ t`预填充` }}</strong>
-          <small>{{ t`在消息末尾预写 AI 开头以引导输出格式，不支持 prefill 的模型可关闭` }}</small>
-        </span>
-      </label>
-    </div>
-
-    <div class="choice-generation-section">
       <div class="choice-field">
         <div class="choice-field-label">
           <label>{{ t`生成数量` }}</label>

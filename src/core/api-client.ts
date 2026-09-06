@@ -7,27 +7,37 @@ export type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string }
 
 const GENERATE_URL = '/api/backends/chat-completions/generate';
 
-/** DeepSeek 专用调用档案——无 UI 无存档，调整＝改这里→build→推 fork→TT 更新即生效。
- *  - REASONING_EFFORT：V4 思考强度 low/high/max。默认 low（用户拍板：high 档思考过久）。
- *    注意传输通道：TT 后端对 openai 源的 reasoning_effort 有 OpenAI 模型白名单（deepseek
- *    会被静默丢弃）、对 deepseek 源会把 low/medium 折叠成 high——所以走 custom_include_body
- *    （服务层在 payload 构建后无条件合并，官方注释"final upstream intent"），这是唯一能把
- *    真实 low 送到 DeepSeek 的路径（源码核实：payload/openai.rs:163 + additional_parameters.rs:68）。
- *  - 思考默认开启（v4 模型特性）；关闭需 thinking.type=disabled，未启用。
- *  - temperature/top_p 不发：V4 思考模式下官方文档明确"设置不报错但不生效"。
- *  - 非流式：弱网下流式断流（body_interrupted）面更大，整响应一次拿更稳。 */
-const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
-const DEEPSEEK_MODEL = 'deepseek-v4-flash';
-/** 官方档位映射（thinking_mode 指南核实）：low→low，medium/high/xhigh→high，max→max；
- *  思考强度唯一可靠闸门＝此参数，必须走 custom_include_body 通道发真值 */
-const REASONING_EFFORT = 'low';
-/** 思考+正文共享此额度（官方未文档化思维链是否计入，但 2026-09-05 实案证实计入：
- *  思维链 6570 字即耗尽 4096，finish_reason=length、正文 0 字）。官方上限 384K，
- *  此处 16k 远未到顶，仅为正文永不被思考截断的保险值 */
-const MAX_TOKENS = 16384;
-const TIMEOUT_SECONDS = 180;
-/** 网络类错误自动重试次数（治弱网抖动+空正文），硬编码不设 UI */
-const RETRY_COUNT = 2;
+/** DeepSeek 专用模型档案——换模型＝改这一个对象→build→推 fork→TT 更新即生效。
+ *
+ *  换模型检查清单（逐项核对新模型文档/实测）：
+ *  ① model/baseUrl：模型名与端点；② reasoningEffort：档位语义与传输通道（见下）；
+ *  ③ maxTokens：输出上限、思维链是否计入额度；④ prefillEnabled：是否支持/需要
+ *  assistant 前缀引导（思考模型慎用，见下）；⑤ stream：流式断流表现；⑥ 输出遵从度：
+ *  <options> 块格式与禁用符号（解析端 options-parse.ts）；⑦ 空正文/思维链吞正文怪癖
+ *  （EmptyContentError 重试已兜底）。
+ *
+ *  - reasoningEffort='low'：V4 思考强度 low/high/max，默认 low（用户拍板：high 档思考过久）。
+ *    传输通道：TT 后端对 openai 源的 reasoning_effort 有 OpenAI 模型白名单（deepseek 会被
+ *    静默丢弃）、对 deepseek 源会把 low/medium 折叠成 high——走 custom_include_body（服务层
+ *    在 payload 构建后无条件合并，官方注释"final upstream intent"）是唯一能送真值的路径
+ *    （源码核实：payload/openai.rs:163 + additional_parameters.rs:68）。
+ *  - maxTokens=16384：思考+正文共享额度（官方未文档化思维链是否计入，2026-09-05 实案证实
+ *    计入：思维链 6570 字耗尽 4096 即正文 0 字）。官方上限 384K，16k 为正文不被截断的保险值。
+ *  - stream=false：弱网下流式断流（body_interrupted）面更大，整响应一次拿更稳。
+ *  - prefillEnabled=false：正式 /v1 接口以 assistant 结尾无行为保障；真前缀续写是 Beta 功能
+ *    （beta base_url + prefix:true）且与思考模式兼容性官方未提；V4 思考模式实测把续写判进
+ *    思维链（曾致正文全空）。思考模型不需要格式引导——非思考模型想要可改 true 发 ACK。
+ *  - temperature/top_p 不发：V4 思考模式官方明确"设置不报错但不生效"。 */
+export const MODEL_PROFILE = {
+  baseUrl: 'https://api.deepseek.com/v1',
+  model: 'deepseek-v4-flash',
+  reasoningEffort: 'low',
+  maxTokens: 16384,
+  stream: false,
+  prefillEnabled: false,
+  timeoutSeconds: 180,
+  retryCount: 2,
+} as const;
 
 /** 模型返回 stop 但正文为空——V4 思考模型偶发把全部输出写进思维链
  *  （2026-09-05 实案×2：1158 额度截断已修，1163 stop+content 空为自发怪癖），
@@ -56,11 +66,11 @@ export async function callDeepSeekWithRetry(messages: ChatMsg[], externalSignal?
   }
 
   let lastError: unknown;
-  for (let attempt = 0; attempt < RETRY_COUNT + 1; attempt++) {
+  for (let attempt = 0; attempt < MODEL_PROFILE.retryCount + 1; attempt++) {
     const attemptController = new AbortController();
     const onExternalAbort = () => attemptController.abort();
     externalSignal?.addEventListener('abort', onExternalAbort, { once: true });
-    const timeoutId = setTimeout(() => attemptController.abort(), TIMEOUT_SECONDS * 1000);
+    const timeoutId = setTimeout(() => attemptController.abort(), MODEL_PROFILE.timeoutSeconds * 1000);
 
     try {
       const resp = await fetch(GENERATE_URL, {
@@ -68,13 +78,13 @@ export async function callDeepSeekWithRetry(messages: ChatMsg[], externalSignal?
         headers: window.SillyTavern?.getContext?.()?.getRequestHeaders?.() ?? {},
         body: JSON.stringify({
           chat_completion_source: 'openai',
-          reverse_proxy: DEEPSEEK_BASE_URL,
+          reverse_proxy: MODEL_PROFILE.baseUrl,
           proxy_password: key,
-          model: DEEPSEEK_MODEL,
+          model: MODEL_PROFILE.model,
           messages,
-          max_tokens: MAX_TOKENS,
-          stream: false,
-          custom_include_body: JSON.stringify({ reasoning_effort: REASONING_EFFORT }),
+          max_tokens: MODEL_PROFILE.maxTokens,
+          stream: MODEL_PROFILE.stream,
+          custom_include_body: JSON.stringify({ reasoning_effort: MODEL_PROFILE.reasoningEffort }),
         }),
         signal: attemptController.signal,
       });
@@ -95,8 +105,12 @@ export async function callDeepSeekWithRetry(messages: ChatMsg[], externalSignal?
       if (externalSignal?.aborted) throw e;
       if (!isRetryableError(e)) throw e;
 
-      if (attempt < RETRY_COUNT) {
-        toastr.info(e instanceof EmptyContentError ? `模型输出为空，自动重试 (${attempt + 1}/${RETRY_COUNT})...` : `网络波动，正在重试 (${attempt + 1}/${RETRY_COUNT})...`);
+      if (attempt < MODEL_PROFILE.retryCount) {
+        toastr.info(
+          e instanceof EmptyContentError
+            ? `模型输出为空，自动重试 (${attempt + 1}/${MODEL_PROFILE.retryCount})...`
+            : `网络波动，正在重试 (${attempt + 1}/${MODEL_PROFILE.retryCount})...`,
+        );
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } finally {

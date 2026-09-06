@@ -7,7 +7,7 @@ import { uuidv4 } from '@sillytavern/scripts/utils';
 import { power_user } from '@sillytavern/scripts/power-user';
 import { parseOptions, resolveCount } from '@/core/options-parse';
 import { resolvePool } from '@/core/pool-resolver';
-import { callDeepSeekWithRetry, type ChatMsg } from '@/core/api-client';
+import { callDeepSeekWithRetry, MODEL_PROFILE, type ChatMsg } from '@/core/api-client';
 import { DEFAULT_MASTER_POOL } from '@/core/default-pool';
 import { useChatSettingsStore } from '@/store/chat-settings';
 import { useGlobalSettingsStore } from '@/store/global-settings';
@@ -57,7 +57,8 @@ export const buildMessages = async (
   contextRounds: number,
 ): Promise<ChatMsg[]> => {
   const gs = useGlobalSettingsStore();
-  const prefillEnabled = gs.settings.prompt_rules.prefill_enabled;
+  // 预填充＝模型档案参数（api-client.ts MODEL_PROFILE.prefillEnabled，DeepSeek 关闭），不进设置 UI
+  const prefillEnabled = MODEL_PROFILE.prefillEnabled;
   const pr = gs.settings.prompt_rules;
   const augmentedCtx: Ctx = {
     ...ctx,
