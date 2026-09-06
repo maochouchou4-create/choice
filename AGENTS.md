@@ -7,7 +7,8 @@ SillyTavern 第三方扩展（基于 `tavern_extension_template` 二次开发）
 - 回复用中文。
 - 代码注释：简体中文、简洁、解释"为什么"而非"做什么"——尤其是覆盖规则、抽取算法、组装序列这类容易被后来者简化/写错的逻辑，注释要点出"为什么不能这样简化"。
 - 任何来自 `@sillytavern/...` 的导入，函数签名/导出名不允许凭记忆假设，必须去 `../TauriTavern`（用户实际使用的酒馆克隆，**dev 分支**，网页根在 `src/`）核实，结论写进注释。
-- **验收基线（每次改动全跑）**：`pnpm build` + `pnpm exec vue-tsc -p tsconfig.typecheck.json`（只看 `src/` 行，须 0 错）+ `pnpm exec eslint .`（0 错误 0 警告）+ `pnpm test`（vitest，23 例）。产物验证：`grep -c "from'../../../../../script.js'" dist/index.js` 须 ≥1（vite 路径常量 5 级，装进酒馆能否加载的唯一判据）。
+- **验收基线（每次改动全跑）**：`pnpm build` + `pnpm exec vue-tsc -p tsconfig.typecheck.json`（只看 `src/` 行，须 0 错）+ `pnpm exec eslint .`（0 错误 0 警告）+ `pnpm test`（vitest，25 例）。产物验证：`grep -c "from'../../../../../script.js'" dist/index.js` 须 ≥1（vite 路径常量 5 级，装进酒馆能否加载的唯一判据）。
+- **每次提交必须递增版本号**：`package.json` 与 `manifest.json` 的 `version` 同步 patch+1（里程碑批次 minor+1）。原因：TT 更新扩展前比对 manifest version，版本不变即判定无更新、跳过拉取（2026-09-06 实案：0.0.7 恒定导致"更新不了"）；版本号也是辨识用户安装了哪笔提交的唯一可见标记。
 - 功能行为验证走用户实测 + TT 前端日志桥（TT 设置开 "Capture full console logs" 后插件 console 进当天日志带 `3p:choice` 前缀），不做浏览器自动化（TT 是 WebView2 桌面应用，a11y/坐标驱动均不可靠）。
 
 ## 关键架构约束
