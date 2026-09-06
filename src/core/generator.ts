@@ -2,6 +2,7 @@ import { substituteParams, this_chid } from '@sillytavern/script';
 import { getStCharacter } from '@/core/st-character';
 import toastr from 'toastr';
 import { getWorldInfoPrompt, loadWorldInfo, selected_world_info } from '@sillytavern/scripts/world-info';
+import { renderWorldInfoContent } from '@/core/ejs-bridge';
 import { uuidv4 } from '@sillytavern/scripts/utils';
 import { power_user } from '@sillytavern/scripts/power-user';
 import { parseOptions, resolveCount } from '@/core/options-parse';
@@ -215,7 +216,7 @@ const buildWI = async (): Promise<WIBuckets> => {
       creatorNotes: ch?.data?.creator_notes ?? '',
     });
 
-    return {
+    const buckets: WIBuckets = {
       before: result.worldInfoBefore ?? '',
       after: result.worldInfoAfter ?? '',
       anBefore: (result.anBefore ?? []).join('\n'),
@@ -229,6 +230,15 @@ const buildWI = async (): Promise<WIBuckets> => {
         .filter(Boolean)
         .join('\n'),
     };
+    // EJS 渲染（世界书 tab 可关）：先展 {{宏}}；装了「提示词模板」插件再执行条目里的
+    // <% %> JS——choice 的独立次级调用不触发模板插件的事件链，不渲染则动态条目
+    // （按好感度切换人设等）拿到的是模板原文
+    if (useGlobalSettingsStore().settings.world_info.render_world_info_ejs) {
+      for (const key of Object.keys(buckets) as (keyof WIBuckets)[]) {
+        if (buckets[key]) buckets[key] = await renderWorldInfoContent(buckets[key]);
+      }
+    }
+    return buckets;
   } catch (err) {
     console.error('[Choice] buildWI failed', err);
     return empty;

@@ -102,6 +102,9 @@ export const WorldInfoGlobalSettings = z
   .object({
     enabled: z.boolean().default(true),
     global_excluded_books: z.array(z.string()).prefault([]),
+    /** 世界书内容渲染：先展 {{宏}}；装了「提示词模板」插件时再执行条目里的 <% %> JS。
+     *  含写变量（setvar）的 EJS 每次生成都会执行，故留开关（上游同款，默认开） */
+    render_world_info_ejs: z.boolean().default(true),
   })
   .prefault({});
 export type WorldInfoGlobalSettings = z.infer<typeof WorldInfoGlobalSettings>;

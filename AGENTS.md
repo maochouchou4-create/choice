@@ -38,6 +38,15 @@ SillyTavern 第三方扩展（基于 `tavern_extension_template` 二次开发）
 - 抽取（pool-resolver.ts）＝**分层随机**：按 category 分组打乱 → 每组保底抽 1（unguaranteed 类别跳过）→ 剩余名额全池随机补足；名额 < 组数时随机选组每组 1 条；pinned 全发不占名额；结果整体打乱。
 - 候选超发：抽签数 = 目标条数 × `candidate_multiplier`（生成 tab 自由数字 1-10，默认 3）。数量策略＝**恰好 N 条、宁缺毋滥**（用户拍板：凑数的次优选项看了也烦；候选够不够靠倍数旋钮，不靠 AI 放宽标准）。数字输入框有 blur 钳制 + schema `.catch` 双保险（脏值曾致插件初始化崩溃）。
 
+## 上游跟踪（2026-09-05 解冻）
+
+origin＝上游 Junwu-Git/choice（同仓持续开发，已到 v1.2.1+）；fork/dev＝发布渠道，**永不 merge 上游**（架构已分叉：我们删了多配置体系，上游 1.x 在其上盖楼）。跟踪机制＝**tag 光标**：
+
+- 本次审计端点打了 tag `upstream-audit-20260905`（= cab01a7）
+- 看增量：`git fetch origin && git log upstream-audit-20260905..origin/main --oneline`
+- 审计完值得移植的批次后，把光标前移：`git tag -f upstream-audit-YYYYMMDD <origin/main 新端点>`
+- 移植方式＝**手动借鉴**（点子/机制重写进我们的架构），不 cherry-pick 不 merge；上传绪见该 commit 的审计分类（A 缺陷已修/B 保险已做/C 候选：插入行为、未读徽章、面板停靠、passive-status 状态栏分支）
+
 ## 已删除勿复活清单
 
 数量区间、条目导入导出、输入润色、提示词编辑界面+多配置、柏宝书桥接、调试 tab、分组抽取+weight+条目池配置体系/编辑对话框、API tab+多 API、魔法棒菜单、悬浮球长按菜单、`[条件]` 挂载机制、shared/ 基础组件（ChoiceCard/ChoiceDialog/ChoiceField/ChoiceSection/useCompactLayout）、`SettingsPanel.vue`、`FloatingContextMenu.vue`、`wand-menu.ts`、`default-prompt-modules.json`。老存档兼容不做（用户明确不玩旧卡）。
