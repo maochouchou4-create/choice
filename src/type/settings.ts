@@ -78,7 +78,10 @@ export type FilterSettings = z.infer<typeof FilterSettings>;
  *  改名会无谓丢掉用户已调好的值。 */
 export const PromptRules = z
   .object({
-    context_rounds: z.number().min(0).default(10),
+    // 数字字段带 .catch：生成 tab 的数字输入框可能把 ''/NaN 写进存档（v-model.number
+    // 清空即如此），下次加载若校验失败会 throw 进 store 初始化、整个插件瘫痪——
+    // 非法值一律回落默认而非崩（上游 dd8c445 同款事故），输入框另有 blur 钳制挡在前面
+    context_rounds: z.number().min(0).default(10).catch(10),
     /** 上下文模式：rounds = 取最后 N 轮（含隐藏消息）；visible_only = 仅未隐藏消息（不限轮数） */
     context_mode: z.enum(['rounds', 'visible_only']).default('visible_only'),
     /** 关闭后不发送 assistant 预填充消息，兼容不支持 prefill 的模型 */
@@ -86,9 +89,9 @@ export const PromptRules = z
     /** 选项人称（简单值），显示在生成页面 */
     option_person: z.string().default('第三人称'),
     /** 选项字数下限 */
-    option_min_chars: z.number().min(10).max(500).default(30),
+    option_min_chars: z.number().min(10).max(500).default(30).catch(30),
     /** 选项字数上限 */
-    option_max_chars: z.number().min(10).max(500).default(80),
+    option_max_chars: z.number().min(10).max(500).default(80).catch(80),
   })
   .prefault({});
 export type PromptRules = z.infer<typeof PromptRules>;
@@ -130,7 +133,7 @@ export const GlobalSettings = z
   .object({
     schema_version: z.number().default(0),
     /** 候选超发倍数：抽签数 = 目标条数 × 倍数，超发候选由生成 AI 终选，过滤不合场景的条目 */
-    candidate_multiplier: z.number().int().min(1).max(10).default(3),
+    candidate_multiplier: z.number().int().min(1).max(10).default(3).catch(3),
     prompt_rules: PromptRules.prefault({}),
     // FilterSettings 全字段带 default，{} 作为输入 parse 即得全默认对象；
     // 不能用 .default({})：zod4 的 default 参数是输出类型，要求逐字段写全

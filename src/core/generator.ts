@@ -323,7 +323,8 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
   const restore = gwi.enabled ? applyWIExcl(allExcl, cwi.enabled_books) : null;
   const restoreEntries = gwi.enabled ? await applyWIEntryExcl(cwi.excluded_entries) : null;
   try {
-    const count = resolveCount(gs.settings.global_count_mode);
+    // 数量钳制：数量框被清空时 resolveCount 返回 0，直接放行会生成 0 条空转一次 API
+    const count = Math.max(1, resolveCount(gs.settings.global_count_mode));
     // 候选超发：抽签数量 = 目标数量 × 倍数，由生成 AI 从候选中终选，
     // 避免"抽到不合场景的条目、AI 只能跳过、本轮缺条"
     const multiplier = Math.min(10, Math.max(1, Math.round(gs.settings.candidate_multiplier || 3)));

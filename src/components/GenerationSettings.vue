@@ -72,6 +72,7 @@
             type="number"
             min="0"
             :title="t`取最后 N 轮对话发送给 AI`"
+            @blur="clampField(rules, 'context_rounds', 0, 99, 10)"
           />
         </label>
       </div>
@@ -107,6 +108,7 @@
             class="text_pole"
             style="width: 80px"
             :placeholder="t`如 5`"
+            @blur="clampCount"
           />
         </label>
       </div>
@@ -133,6 +135,7 @@
             step="1"
             class="text_pole"
             style="width: 4.5em"
+            @blur="clampField(gs.settings, 'candidate_multiplier', 1, 10, 3)"
           />
         </label>
       </div>
@@ -155,6 +158,7 @@
             type="number"
             min="10"
             max="500"
+            @blur="clampField(rules, 'option_min_chars', 10, 500, 30)"
           />
           <span>-</span>
           <input
@@ -164,6 +168,7 @@
             type="number"
             min="10"
             max="500"
+            @blur="clampField(rules, 'option_max_chars', 10, 500, 80)"
           />
         </label>
       </div>
@@ -191,6 +196,19 @@ import { useGlobalSettingsStore } from '@/store/global-settings';
 
 const gs = useGlobalSettingsStore();
 const rules = gs.settings.prompt_rules;
+
+// 数字输入框失焦归位：清空/越界值不允许落进存档——
+// 存档脏值会让下次加载的 Zod 校验失败、整个插件初始化崩溃（上游 dd8c445 同款事故）
+const clampField = (obj: Record<string, unknown>, key: string, min: number, max: number, fallback: number) => {
+  const raw = Number(obj[key]);
+  obj[key] = Number.isFinite(raw) ? Math.min(max, Math.max(min, Math.round(raw))) : fallback;
+};
+const clampCount = (e: FocusEvent) => {
+  const el = e.target as HTMLInputElement;
+  const n = parseInt(el.value, 10);
+  el.value = String(Number.isFinite(n) && n > 0 ? Math.min(99, n) : 5);
+  gs.settings.global_count_mode = el.value;
+};
 </script>
 
 <style scoped>
