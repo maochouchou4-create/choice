@@ -17,7 +17,7 @@ SillyTavern 第三方扩展（基于 `tavern_extension_template` 二次开发）
 - **`@sillytavern` 导入隔离**：这类导入（摸真实酒馆源码，非 npm 包）只允许出现在 `src/core/` 下，不允许散落进 Vue 组件。
 - **代码单源三件套（无 UI 无存档，Agent 直改→build→推 fork→TT 更新即生效）**：
   - 提示词＝`src/core/default-prompt.ts`（一整块正文，【小节】组织）；
-  - 条目池＝`src/core/default-pool.ts`（10 组 84 条通用行动原型）；
+  - 条目池＝`src/core/default-pool.ts`（11 组 94 条通用行动原型，含 NSFW 组不保底）；
   - API＝`src/core/api-client.ts`（DeepSeek 专用全常量）。
   用户声明**永不通过插件界面改内容，插件只留开关**；勿复活任何编辑界面/配置体系/存档迁移。
 - **消息组装走角色结构（generator.buildMessages 线性直写）**：system 规则正文 → [prefill] assistant 确认 → system `<reference>`（user persona/世界书/角色卡三件套）→ system `<history>` 包裹的交替历史（末条 assistant 包 `<current_scene>`）→ user 本轮任务。**铁律：消息序列末条不得以未闭合标签结尾**（思考模型会把续写判为思维链、正文为空，2026-09-05 实案）。
@@ -34,9 +34,9 @@ SillyTavern 第三方扩展（基于 `tavern_extension_template` 二次开发）
 ## 条目池模型 & 抽取算法
 
 - 条目字段（`PoolEntry`）：`id`（语义化命名如 `daily-01`）、`type`（标题）、`content`（行动意图）、`rule`（写作硬约束，渲染为 `[规则: y]`）、`pinned`（固定生成）、`category`（组归属）。**无 weight 无 condition**（均已删，勿复活）。
-- 池子＝10 组 84 条（1 条 pinned 转场推进不占随机名额，实际随机池 83 条）。设计哲学：条目＝**通用行动原型，不预设人设**；人设是"颜料"由生成 AI 改写时上色；措辞中性禁城府味。
-- 抽取（pool-resolver.ts）＝**分层随机**：按 category 分组打乱 → 每组保底抽 1（行动层面全覆盖）→ 剩余名额全池随机补足；名额 < 组数时随机选组每组 1 条；pinned 全发不占名额；结果整体打乱。
-- 候选超发：抽签数 = 目标条数 × `candidate_multiplier`（生成 tab 自由数字 1-10，默认 3）。数量策略＝**恰好 N 条、宁缺毋滥**（用户拍板：凑数的次优选项看了也烦；候选够不够靠倍数旋钮，不靠 AI 放宽标准）。
+- 池子＝11 组 94 条（1 条 pinned 转场推进不占随机名额；NSFW 组 10 条**不参与每组保底**，仅随机补充位出现——见 `UNGUARANTEED_CATEGORIES`）。设计哲学：条目＝**通用行动原型，不预设人设**；人设是"颜料"由生成 AI 改写时上色；措辞中性禁城府味。
+- 抽取（pool-resolver.ts）＝**分层随机**：按 category 分组打乱 → 每组保底抽 1（unguaranteed 类别跳过）→ 剩余名额全池随机补足；名额 < 组数时随机选组每组 1 条；pinned 全发不占名额；结果整体打乱。
+- 候选超发：抽签数 = 目标条数 × `candidate_multiplier`（生成 tab 自由数字 1-10，默认 3）。数量策略＝**恰好 N 条、宁缺毋滥**（用户拍板：凑数的次优选项看了也烦；候选够不够靠倍数旋钮，不靠 AI 放宽标准）。数字输入框有 blur 钳制 + schema `.catch` 双保险（脏值曾致插件初始化崩溃）。
 
 ## 已删除勿复活清单
 
