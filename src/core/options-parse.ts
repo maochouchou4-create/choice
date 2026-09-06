@@ -108,6 +108,9 @@ export function parseOptions(text: string, count: number): string[] {  // 找到
     .split(/\r?\n/)
     .map(l => l.trim())
     .filter(l => l.length > 0 && !/^<\/?\w+>$/i.test(l));
+  // 行首编号剥离："1. "/"2、"/"3)" 是模型对 [标题]内容 格式的常见违反（编号列表），
+  // 编号无信息量，留在成品里只会污染标题与正文
+  const stripEnumerator = (s: string) => s.replace(/^\s*\d{1,3}\s*[.、)]\s*/, '');
   // 标题格式：2-5 个汉字后跟 ": " 或 "： "（\s* 兼容零空格/双空格/制表符等容错）
   const titleRe = /([\u4e00-\u9fff]{2,5})[:：]\s*/g;
   const result: string[] = [];
@@ -116,13 +119,13 @@ export function parseOptions(text: string, count: number): string[] {  // 找到
     // 替换原有的 lastIdx 算法，解决第一个标题在 index 0 时后续选项丢失的 bug
     const matches = [...line.matchAll(titleRe)];
     if (matches.length === 0) {
-      result.push(line);
+      result.push(stripEnumerator(line));
       continue;
     }
     for (let i = 0; i < matches.length; i++) {
       const start = matches[i].index!;
       const end = i + 1 < matches.length ? matches[i + 1].index! : line.length;
-      result.push(line.slice(start, end).trim());
+      result.push(stripEnumerator(line.slice(start, end).trim()));
     }
   }
   return result.slice(0, count);

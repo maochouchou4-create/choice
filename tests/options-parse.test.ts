@@ -86,4 +86,13 @@ describe('parseOptions', () => {
     expect(parseOptions('', 5)).toEqual([]);
     expect(parseOptions('纯文本没有格式', 5)).toEqual(['纯文本没有格式']);
   });
+
+  it('行首编号剥离（模型输出编号列表的常见违反，上游无此兜底）', () => {
+    const text = '<options>\n1. 场景以王玉为轴心缓缓转暗，再亮起时，已是次日。\n放低声音：“你心里到底是怎么想的？”\n3. 王玉抬手，指尖极轻地碰了对方。\n</options>';
+    expect(parseOptions(text, 6)).toEqual([
+      '场景以王玉为轴心缓缓转暗，再亮起时，已是次日。',
+      '放低声音：“你心里到底是怎么想的？”',
+      '王玉抬手，指尖极轻地碰了对方。',
+    ]);
+  });
 });
