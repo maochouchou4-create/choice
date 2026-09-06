@@ -1,7 +1,7 @@
 import { substituteParams, this_chid } from '@sillytavern/script';
 import { getStCharacter } from '@/core/st-character';
 import toastr from 'toastr';
-import { getWorldInfoPrompt, selected_world_info } from '@sillytavern/scripts/world-info';
+import { getWorldInfoPrompt, loadWorldInfo, selected_world_info } from '@sillytavern/scripts/world-info';
 import { uuidv4 } from '@sillytavern/scripts/utils';
 import { power_user } from '@sillytavern/scripts/power-user';
 import { parseOptions, resolveCount } from '@/core/options-parse';
@@ -236,6 +236,47 @@ const buildWI = async (): Promise<WIBuckets> => {
 };
 
 type Restore = { restore: () => void } | null;
+
+/** 条目级世界书排除：世界书 tab 勾选的 excluded_entries（'书名::uid'）只在 UI 记账，
+ *  ST 的关键词触发机制并不认识它——不临时 disable 的话被勾条目照样注入（静默失效）。
+ *  生成前把对应条目临时置 disable，生成后原样恢复；只处理当前会注入的书
+ *  （applyWIExcl 之后的 selected_world_info ∪ 角色绑定书），整本已排除的书不用动。 */
+const applyWIEntryExcl = async (excludedKeys: string[]): Promise<Restore> => {
+  if (!excludedKeys.length) return null;
+  const byBook = new Map<string, Set<string>>();
+  for (const key of excludedKeys) {
+    const sep = key.indexOf('::');
+    if (sep <= 0) continue;
+    const bookName = key.slice(0, sep);
+    const set = byBook.get(bookName) ?? new Set<string>();
+    set.add(key.slice(sep + 2));
+    byBook.set(bookName, set);
+  }
+  const charWorld = getStCharacter(this_chid)?.data?.extensions?.world as string | undefined;
+  const touched: { entry: any; original: boolean }[] = [];
+  for (const [bookName, uids] of byBook) {
+    const active = selected_world_info?.includes(bookName) || charWorld === bookName;
+    if (!active) continue;
+    try {
+      const data = (await loadWorldInfo(bookName)) as { entries?: Record<string, any> } | undefined;
+      for (const entry of Object.values(data?.entries ?? {})) {
+        if (uids.has(String(entry?.uid)) && !entry.disable) {
+          touched.push({ entry, original: entry.disable });
+          entry.disable = true;
+        }
+      }
+    } catch (err) {
+      console.warn('[Choice] 条目排除处理失败:', bookName, err);
+    }
+  }
+  if (!touched.length) return null;
+  return {
+    restore: () => {
+      for (const t of touched) t.entry.disable = t.original;
+    },
+  };
+};
+
 export const applyWIExcl = (excl: string[], enabled: string[]): Restore => {
   const saved = [...(selected_world_info ?? [])];
   const hasExcl = excl.length > 0;
@@ -280,6 +321,7 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
   const cwi = cs.settings.world_info;
   const allExcl = [...new Set([...gwi.global_excluded_books, ...cwi.excluded_books])];
   const restore = gwi.enabled ? applyWIExcl(allExcl, cwi.enabled_books) : null;
+  const restoreEntries = gwi.enabled ? await applyWIEntryExcl(cwi.excluded_entries) : null;
   try {
     const count = resolveCount(gs.settings.global_count_mode);
     // 候选超发：抽签数量 = 目标数量 × 倍数，由生成 AI 从候选中终选，
@@ -346,6 +388,7 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
     toastr.error(t`选项生成失败:${e instanceof Error ? e.message : String(e)}`);
     return null;
   } finally {
+    if (restoreEntries) restoreEntries.restore();
     if (restore) restore.restore();
     cancelled = false;
     genController = null;
