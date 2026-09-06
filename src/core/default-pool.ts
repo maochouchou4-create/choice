@@ -1,7 +1,7 @@
 import type { PoolEntry } from '@/type/settings';
 
 /** 条目池唯一事实源（无存档无 UI，改条目＝改本文件→build→推 fork）。
- *  出厂默认：10 组 84 条（含 1 条 pinned 转场推进，不占随机名额，实际随机池 83 条）。
+ *  出厂默认：11 组 94 条（含 1 条 pinned 转场推进，不占随机名额）。
  *  设计哲学：条目＝通用行动原型，不预设人设；人设是"颜料"，由生成 AI 在改写时上色。
  *  措辞全面中性化，禁止自带城府/老练气质；无条件挂载机制（原 [条件] 已删）。
  *  id 采用「组前缀-序号」语义化命名，仅作唯一标识，无外部契约。
@@ -110,4 +110,17 @@ export const DEFAULT_MASTER_POOL: PoolEntry[] = [
   { id: 'lens-05', type: '退到一旁', content: '从互动中退出来，在一旁安静地看着', rule: '', pinned: false, category: '环境与镜头' },
   { id: 'lens-06', type: '慢下来感受', content: '放慢节奏，用感官细写此刻的声音、气味与温度', rule: '', pinned: false, category: '环境与镜头' },
   { id: 'lens-07', type: '抽离回望', content: '从当下抽离一瞬，回望这段关系或这一天', rule: '', pinned: false, category: '环境与镜头' },
+
+  // ── K NSFW：亲密向方向级条目（移植自上游 60ed559，措辞改主体中立）。
+  //    正常参与分层保底，场景不适配的候选由生成 AI 终选淘汰 ──
+  { id: 'nsfw-01', type: 'NSFW·主动出击', content: '主动发起或加码一次亲密接触，火候与方式贴合当前氛围，不必等对方先递台阶', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-02', type: 'NSFW·顺势而为', content: '抓住此刻氛围里最微妙的信号顺势回应，不点破，却让默契升温半分', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-03', type: 'NSFW·交出主导', content: '把主导权交给对方——示意对方来安排节奏，自己只管接住每一个反应', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-04', type: 'NSFW·半推半就', content: '嘴上矜持、身体诚实——口头的推拒与行动的迎合形成诱人反差', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-05', type: 'NSFW·变换姿势', content: '提议换个姿势或挪到别的位置继续——移动本身也是情趣的一部分', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-06', type: 'NSFW·就地取材', content: '借现场物件或环境为当下氛围添彩——因地制宜，不拘小节', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-07', type: 'NSFW·情趣道具', content: '提议用上情趣小物件助兴——从试探到提议，看对方接不接招', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-08', type: 'NSFW·语言调情', content: '用言语调情或说出羞人请求——声音也是武器，说出口才升温', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-09', type: 'NSFW·事后温存', content: '亲近过后依偎温存——喘息未定时的耳语与轻抚别有滋味', rule: '', pinned: false, category: 'NSFW' },
+  { id: 'nsfw-10', type: 'NSFW·大胆尝试', content: '以前没试过、此刻却心血来潮想做点新尝试——把「要不要」抛给对方', rule: '', pinned: false, category: 'NSFW' },
 ];
