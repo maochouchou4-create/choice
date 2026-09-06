@@ -62,6 +62,16 @@ describe('parseOptions', () => {
     expect(parseOptions(text, 5)).toEqual(['【潜入】翻墙进去顺手关灯', '【离开】转身就走']);
   });
 
+  it('同行堆叠括号并入同条，不切碎（上游 75395e4 同款）', () => {
+    const text = '<options>\n[回溯闪回]【三年前·初二暑假】一切如旧\n[离开] 推门而出\n</options>';
+    expect(parseOptions(text, 5)).toEqual(['[回溯闪回]【三年前·初二暑假】一切如旧', '[离开] 推门而出']);
+  });
+
+  it('同行多括号全部并入首条（含紧贴堆叠）', () => {
+    expect(parseOptions('[一] 甲 [二] 乙 [三] 丙', 5)).toEqual(['[一] 甲 [二] 乙 [三] 丙']);
+    expect(parseOptions('[回溯闪回]【三年前】一切如旧', 5)).toEqual(['[回溯闪回]【三年前】一切如旧']);
+  });
+
   it('旧格式 "标题: 内容" 支持同行多选项', () => {
     const text = '调查: 翻文件 观察: 记下编号';
     expect(parseOptions(text, 5)).toEqual(['调查: 翻文件', '观察: 记下编号']);

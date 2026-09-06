@@ -13,8 +13,12 @@ export const resolveCount = (cm: string): number => {
 export const STRIP_REASONING_TAGS_RE =
   /<(?:think(?:ing)?|reasoning|thought)>[\s\S]*?<\/(?:think(?:ing)?|reasoning|thought)>/gi;
 
-export function parseOptions(text: string, count: number): string[] {
-  // 找到最后一个思维链闭合标签，丢弃它之前的所有内容
+const pushOption = (result: string[], raw: string) => {
+  const option = raw.replace(/\r?\n/g, '').trim();
+  if (option) result.push(option);
+};
+
+export function parseOptions(text: string, count: number): string[] {  // 找到最后一个思维链闭合标签，丢弃它之前的所有内容
   // 原因：AI 可能在思维链中以文本形式提到 <options>（如"格式：<options> 标签内..."），
   // 直接在原始文本中 matchAll <options> 会误匹配到这些文本引用，导致提取错误
   const closeTagRe = /<\/(?:think(?:ing)?|reasoning|thought)>/gi;
@@ -71,17 +75,30 @@ export function parseOptions(text: string, count: number): string[] {
       /* not JSON */
     }
 
-  // 【】或 [] 格式：标题用【】或 [] 包裹，后续文本为内容，跨行自动合并
-  const bracketTitleRe = /[[【]([^\]】]+?)[\]】]\s*/g;
+  // 【】或 [] 格式：标题用【】或 [] 包裹，后续文本为内容，跨行自动合并。
+  // 行锚定：仅行首括号开启新选项，同一行内隔空白的连续括号（标签堆叠如
+  // [标题]内容【补充】）并入同条——否则一条会被切成两条（上游 75395e4 同款）
+  const bracketTitleRe = /[[【]([^\]】]+?)[\]】]/g;
   const bracketMatches = [...c.matchAll(bracketTitleRe)];
   if (bracketMatches.length > 0) {
     const result: string[] = [];
+    let segStart: number | null = null;
     for (let i = 0; i < bracketMatches.length; i++) {
-      const start = bracketMatches[i].index!;
-      const end = i + 1 < bracketMatches.length ? bracketMatches[i + 1].index! : c.length;
-      const option = c.slice(start, end).replace(/\r?\n/g, '').trim();
-      if (option) result.push(option);
+      const m = bracketMatches[i];
+      const start = m.index!;
+      const prevEnd = i === 0 ? 0 : bracketMatches[i - 1].index! + bracketMatches[i - 1][0].length;
+      const before = c.slice(prevEnd, start);
+      const lineTail = before.includes('\n') ? before.slice(before.lastIndexOf('\n') + 1) : before;
+      // 行首＝与上一括号之间确有换行且其后仅空白；before 为空（紧贴堆叠）无换行证据，并入同条
+      const atLineStart = before.length > 0 && /^\s*$/.test(lineTail);
+      if (segStart === null) {
+        segStart = start;
+      } else if (atLineStart) {
+        pushOption(result, c.slice(segStart, start));
+        segStart = start;
+      }
     }
+    if (segStart !== null) pushOption(result, c.slice(segStart, c.length));
     return result.slice(0, count);
   }
 
