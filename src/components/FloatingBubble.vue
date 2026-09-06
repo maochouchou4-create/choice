@@ -178,6 +178,9 @@ const handleResize = () => {
 };
 
 onMounted(() => {
+  // 存档位置可能来自更宽的窗口（换设备/改窗口后重开），挂载即钳一次，
+  // 否则无 resize 事件时球整个悬在屏外不可见（上游 eb482ef 同款）
+  handleResize();
   bubbleEl.value?.addEventListener('pointerdown', onPointerDown);
   bubbleEl.value?.addEventListener('pointermove', onPointerMove);
   window.addEventListener('resize', handleResize);
