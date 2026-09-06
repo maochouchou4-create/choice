@@ -122,6 +122,18 @@ export const buildMessages = async (
       merged.push({ ...msg });
     }
   }
+
+  // 调试证据链（经 TT 前端日志桥可查）：请求消息结构 + 模型看到的正文全文。
+  // 没有这两样，"选项空洞/对不上正文"类问题无法定位（TT 的 llm-api 落盘仅保留最近几次）
+  const sceneMsg = merged.find(m => m.content.includes('<current_scene>'));
+  const sceneText = sceneMsg
+    ? sceneMsg.content.slice(sceneMsg.content.indexOf('<current_scene>'), sceneMsg.content.indexOf('</current_scene>') + 16)
+    : '（警告：历史为空，模型没有收到任何正文！）';
+  console.info(
+    '[Choice] 请求组装:',
+    merged.map(m => `${m.role}(${m.content.length}字)`).join(' + '),
+    '\n[Choice] 模型看到的正文 <current_scene>:\n' + sceneText,
+  );
   return merged;
 };
 
@@ -380,7 +392,10 @@ export async function generateOptions(_target: GenerateTarget): Promise<ChoiceGe
 
     const raw = await callDeepSeekWithRetry(messages, signal);
     if (cancelled) return null;
+    // 调试证据链：模型完整原始输出（无论解析成败都留档）
+    console.info('[Choice] 模型完整原始输出:\n' + raw);
     const options = parseOptions(raw, count).map(t => ({ text: t, sourceEntryId: null }));
+    console.info(`[Choice] 解析出 ${options.length}/${count} 条选项`);
     if (!options.length) {
       // 排错主通道：原始输出打进 console，经 TT 前端日志桥（3p:choice 前缀）可查
       console.warn('[Choice] 解析失败，模型原始输出:', raw);
